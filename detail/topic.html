@@ -1,0 +1,36 @@
+<table class="uk-table uk-table-divider" id="table-edit-topic">
+    <!-- <caption>Sub Topics</caption> -->
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Path</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for topic in topics %}
+        <tr>
+            <td>
+                <input class="uk-input" type="text" name="{{ topic.name }}" value="{{ topic.name }}" disabled="true">
+            </td>
+            <td>
+                <input class="uk-input" type="text" name="{{ topic.name }}-{{ topic.path }}" value="{{ topic.path }}" disabled="true">
+            </td>
+            <td class="uk-flex-column">
+                <label><input class="uk-checkbox" type="checkbox" name="sub" {% if topic.is_sub %}checked{% endif %} disabled="true">Subscribe</label>
+                <label><input class="uk-checkbox" type="checkbox" name="pub" {% if topic.is_pub %}checked{% endif %} disabled="true">Publish</label>
+            </td>
+            <td>
+                <button hx-get="{% url 'dashboard:delete_topic' topic.id %}" hx-target="#table-edit-topic" class="uk-button uk-button-small uk-button-danger">
+                    <span uk-icon="trash"></span>
+                </button>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td>None</td>
+            <td>None</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

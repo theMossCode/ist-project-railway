@@ -1,0 +1,30 @@
+{% extends './base.html' %}
+{% block title_block %}MQTT Dashboard|Log In{% endblock title_block %}
+{% block formid %}"log-in"{% endblock formid %}
+{% block formaction %} "{% url 'authentication:login' %}" {% endblock formaction %}
+{% block formbodyblock %}
+<fieldset class="uk-fieldset">
+    <div class="uk-margin">
+        <legend class="uk-legend">Log In</legend>
+    </div>
+    <div class="uk-margin">
+        <label for="username" class="uk-form-label">Username</label>
+        <input type="text" name="username" id="username" class="uk-input">
+    </div>
+    <div class="uk-margin">
+        <label for="password" class="uk-form-label">Password</label>
+        <input type="password" name="password" id="password" class="uk-input">
+    </div>
+    <div class="uk-margin">
+        {% if form.errors %}
+        <p class="uk-form-danger uk-margin-remove-top">Username or password does not match!</p>
+        {% endif %}
+    </div>
+    <div class="uk-margin">
+        <button type="submit" class="uk-button uk-button-primary uk-margin-small-bottom">Log In</button>
+    </div>
+    <div class="uk-margin">
+        <h6>Don't have an account? <a href="{% url 'authentication:signup' %}" class="uk-text-bold">Sign up</a></h6>
+    </div>
+</fieldset>
+{% endblock formbodyblock %}

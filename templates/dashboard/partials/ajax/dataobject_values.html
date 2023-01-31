@@ -1,0 +1,32 @@
+<div>
+    <div class="uk-container uk-container-large">
+        <div class="uk-grid">
+            <div class="uk-container uk-container-expand uk-width-1-1@s">
+                {{ bokeh_div|safe }}
+            </div>
+            <div class="uk-container uk-container-expand uk-width-1-1@s uk-overflow-auto uk-height-small">
+                <table class="uk-table uk-table-small">
+                    <thead>
+                        <th>Name</th>
+                        <th>Timestamp</th>
+                        <th>Value</th>
+                    </thead>
+                    <tbody>
+                        {% for data in data_list %}
+                        <tr>
+                            <td>{{ data_object.name }}</td>
+                            <td>{{ data.timestamp }}</td>
+                            <td>{{ data.value }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <span>No data...</span>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {{ bokeh_script|safe }}
+    </div>
+</div>

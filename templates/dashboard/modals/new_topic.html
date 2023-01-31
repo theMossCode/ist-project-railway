@@ -1,0 +1,67 @@
+<div class="uk-modal-dialog uk-modal-body">
+    <form hx-post="{% url 'dashboard:new_topic' project.id %}">
+        {% csrf_token %}
+        <fieldset class=" uk-fieldset">
+            <div class="uk-modal-header">
+                <legend class="uk-legend">Add Topic</legend>
+            </div>
+            <div class="uk-modal-body" uk-overflow-auto>
+                {% if form.non_field_errors %}
+                <div class="uk-margin">
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
+                <div class="uk-margin">
+                    {% if form.name.errors %}
+                    {{ form.name.errors }}
+                    {% endif %}
+                    <label for="name">Name</label>
+                    <input type="text" name="name" id="name" class="uk-input" value="{{ form.data.name }}">
+                </div>
+                <div class="uk-margin">
+                    {% if form.desc.errors %}
+                    {{ form.desc.errors }}
+                    {% endif %}
+                    <label for="desc">Description</label>
+                    <textarea class="uk-textarea" name="desc" id="desc">{{ form.data.desc }}</textarea>
+                </div>
+                <div class="uk-margin">
+                    <label for="project">Project</label>
+                    <input type="text" name="project" class="uk-input" disabled="true" value="{{ project.name }}">
+                </div>
+                <div class="uk-margin">
+                    <div class="uk-grid">
+                        <div class="uk-width-3-4">
+                            <label>Topic<input class="uk-input" type="text" name="path" id="path" value="{{ form.data.path }}"></label>
+                            {% if form.path.errors %}
+                            {{ form.path.errors }}
+                            {% endif %}
+                        </div>
+                        <div class="uk-width-1-4">
+                            <label>QOS
+                                <select class="uk-select" name="qos">
+                                    {% for id, choice in qos_choices %}
+                                    <option value="{{ id }}">{{ choice }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            {% if form.qos.errors %}
+                            {{ form.qos.errors }}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="uk-margin">
+                    <label><input class="uk-radio" type="radio" name="sub" value="sub" checked>Subscribe</label>
+                    <label><input class="uk-radio" type="radio" name="sub" value="pub">Publish</label>
+                </div>
+            </div>
+            <div class="uk-modal-footer">
+                <!-- <div class="uk-text-left"> -->
+                <button type="submit" class="uk-button uk-button-primary">Submit</button>
+                <button type="button" class="uk-button" onclick="hideModal('new-topic-dialog')">Cancel</button>
+                <!-- </div> -->
+            </div>
+        </fieldset>
+    </form>
+</div>

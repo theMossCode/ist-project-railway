@@ -1,0 +1,22 @@
+<div class="uk-container uk-container-xlarge">
+    <div class="uk-section uk-section-xsmall" uk-sticky style="background-color: white;">
+        <div class="uk-grid uk-margin-remove">
+            {% include "../common/breadcrumb.html" %}
+            <div>
+                <button class="uk-button uk-button-default uk-button-small" hx-get="{% url 'dashboard:new_variable' project.id %}" hx-target="#new-variable-dialog" hx-swap="innerHTML">
+                    <span uk-icon="icon: plus-circle"></span>
+                    New Variable
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="uk-container uk-container-xlarge">
+    <div class="uk-width-1-2@s" uk-grid>
+    {% for variable in variables %}
+    <!-- TODO display widgets -->
+    {% empty %}
+    <h5 class="uk-h5">No variables...</h5>
+    {% endfor %}
+</div>
+</div>

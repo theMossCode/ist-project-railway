@@ -1,0 +1,27 @@
+{% extends "../base.html" %}
+{% block topmenublock %}
+<div class="uk-card uk-card-body uk-padding-remove uk-background-muted uk-position-z-index" uk-sticky="end: false; offset:80">
+    <ul class="uk-breadcrumb">
+        <li><a href="{% url 'dashboard:index' %}" class="uk-text-bold">Projects</a></li>
+        <li><a href="{% url 'dashboard:detail_project' topic.project.id %}" class="uk-text-bold">{{ topic.project.host }}</a></li>
+        <li><a href="{% url 'dashboard:detail_topic' topic.id %}" class="uk-text-bold">{{ topic.name }}</a></li>
+    </ul>
+    <button class="uk-button uk-button-default uk-button-small uk-position-center-right" hx-get="{% url 'dashboard:new_dataobject' topic.id %}" hx-target="#new-dataobject-dialog" hx-swap="innerHTML">
+        <span uk-icon="icon: plus-circle"></span>
+        New Data Field
+    </button>
+</div>
+{% endblock topmenublock %}
+{% block maincontentblock %}
+<div class="uk-container uk-container-expand uk-overflow-auto uk-height-viewport">
+    <div class="uk-child-width-1-2@s" id="div-main-grid" uk-grid>
+        {% include "./include/topic_content.html" %}
+    </div>
+</div>
+{% endblock maincontentblock %}
+{% block modalsblock %}
+<div id="new-dataobject-dialog" class="uk-modal uk-modal-container" hx-target="this" esc-close=false bg-close=false>
+</div>
+<div id="edit-dataobject-dialog" class="uk-modal uk-modal-container" hx-target="this" esc-close=false bg-close=false>
+</div>
+{% endblock modalsblock %}

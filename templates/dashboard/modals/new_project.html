@@ -1,0 +1,70 @@
+<!-- <div id="new-project-modal" hx-target="this" hx-swap="outerHTML" uk-modal> -->
+<div class="uk-modal-dialog uk-modal-body">
+    <form hx-post="{% url 'dashboard:new_project' %}">
+        {% csrf_token %}
+        <fieldset class=" uk-fieldset">
+            <legend class="uk-legend">New Project</legend>
+            {% if form.non_field_errors %}
+            <span class="uk-text-danger">
+                {{ form.non_field_errors }}
+            </span>
+            {% endif %}
+            <div class="uk-margin">
+                {% if form.name.errors %}
+                {{ form.name.errors }}
+                {% endif %}
+                <label for="name">Name</label>
+                <input type="text" name="name" id="name" class="uk-input" value="{{ form.data.name }}">
+            </div>
+            <div class="uk-margin">
+                <label for="desc">Description</label>
+                <textarea class="uk-textarea" name="desc" id="desc">{{ form.data.desc }}</textarea>
+            </div>
+            <hr>
+            <div class="uk-margin">
+                <div class="uk-grid">
+                    <div class="uk-width-1-1">
+                        <h5>MQTT Server Info</h5>
+                    </div>
+                    <div class="uk-grid-divider">
+                    </div>
+                    <div class="uk-width-3-4">
+                        {% if form.errors.mqtt_host %}
+                        <span class="uk-text-danger">{{ form.errors.mqtt_host }}</span>
+                        {% endif %}
+                        <label for="mqtt_host">Host</label>
+                        <input type="text" name="mqtt_host" id="mqtt_host" class="uk-input" value="{{ form.data.mqtt_host }}">
+                    </div>
+                    <div class="uk-width-1-4">
+                        {% if form.errors.mqtt_port %}
+                        <span class="uk-text-danger">{{ form.errors.mqtt_port }}</span>
+                        {% endif %}
+                        <label for="mqtt_port">Port</label>
+                        <input type="number" name="mqtt_port" id="mqtt_port" class="uk-input" value="{{ form.data.mqtt_port }}">
+                    </div>
+                    <div class="uk-width-1-2">
+                        {% if form.errors.mqtt_username %}
+                        <span class="uk-text-danger">{{ form.errors.mqtt_username }}</span>
+                        {% endif %}
+                        <label for="mqtt_username">Username</label>
+                        <input type="text" name="mqtt_username" id="mqtt_username" class="uk-input" value="{{ form.data.mqtt_username }}">
+                    </div>
+                    <div class="uk-width-1-2">
+                        {% if form.errors.mqtt_password %}
+                        <span class="uk-text-danger">{{ form.errors.mqtt_password }}</span>
+                        {% endif %}
+                        <label for="mqtt_password">Password</label>
+                        <input type="password" name="mqtt_password" class="uk-input">
+                    </div>
+                </div>
+            </div>
+            <div class="uk-margin">
+                <div class="uk-text-left">
+                    <button type="submit" class="uk-button uk-button-primary">Submit</button>
+                    <button type="button" class="uk-button" onclick="hideModal('new-project-dialog')">Cancel</button>
+                </div>
+            </div>
+        </fieldset>
+    </form>
+</div>
+<!-- </div> -->

@@ -1,0 +1,27 @@
+{% extends "../base.html" %}
+{% block topmenublock %}
+<div class="uk-card uk-card-body uk-padding-remove uk-background-muted uk-position-z-index" uk-sticky="end: false; offset:84">
+    <ul class="uk-breadcrumb">
+        <li><a href="{% url 'dashboard:index' %}" class="uk-text-bold">Projects</a></li>
+    </ul>
+    <div class="uk-container-small uk-position-center-right">
+        <button class="uk-button uk-button-default uk-button-small" hx-get="{% url 'dashboard:refresh_connections' %}" hx-target="#div-main-grid" hx-swap="innerHTML">
+            <span uk-icon="icon: refresh"></span>
+            Refresh Connections
+        </button>
+        <button class="uk-button uk-button-default uk-button-small" hx-get="{% url 'dashboard:new_project' %}" hx-target="#new-project-dialog" hx-swap="innerHTML">
+            <span uk-icon="icon: plus-circle"></span>
+            New Project
+        </button>
+    </div>
+</div>
+{% endblock topmenublock %}
+{% block maincontentblock %}
+<div class="uk-child-width-1-2@s uk-height-viewport uk-overflow-auto" id="div-main-grid" uk-grid>
+    {% include "./include/index_content.html" %}
+</div>
+{% endblock maincontentblock %}
+{% block modalsblock %}
+<div id="new-project-dialog" class="uk-modal uk-modal-container" hx-target="this" esc-close=false bg-close=false>
+</div>
+{% endblock modalsblock %}

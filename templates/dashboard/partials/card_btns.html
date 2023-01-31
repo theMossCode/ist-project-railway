@@ -1,0 +1,10 @@
+{% if button1_icon %}
+<a href="{{ button1_url }}" class="uk-button uk-button-small uk-button-default">
+    <span uk-icon="{{ button1_icon }}"></span>
+</a>
+{% endif %}
+{% if button2_icon %}
+<button class="uk-button uk-button-small uk-button-danger" hx-get="{{ button2_url }}" hx-target="#div-main-grid">
+    <span uk-icon="{{ button2_icon }}"></span>
+</button>
+{% endif %}

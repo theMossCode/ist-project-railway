@@ -1,0 +1,6 @@
+<div class="uk-modal-dialog uk-modal-body">
+    {% with form_legend="Edit dataobject.name" dialog_id="edit-dataobject-dialog"%}
+    {% url "dashboard:edit_dataobject" dataobject.id as post_url %}
+    {% include "../partials/dataobject_form.html" %}
+    {% endwith %}
+</div>

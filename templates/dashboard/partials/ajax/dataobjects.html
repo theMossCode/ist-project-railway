@@ -1,0 +1,22 @@
+<div class="uk-container-expand uk-overflow-auto uk-height-medium">
+    <table class="uk-table">
+        <thead>
+            <th>Name</th>
+            <th>Value</th>
+            <th>Timestamp</th>
+        </thead>
+        <tbody>
+            {% for data_detail in data_details %}
+            <tr>
+                <td>{{ data_detail.model.name }}</td>
+                <td>{{ data_detail.value }}</td>
+                <td>{{ data_detail.timestamp }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td>No items...</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

@@ -1,0 +1,18 @@
+<nav class="uk-navbar-container" uk-navbar uk-sticky="end: false">
+    <div class="uk-navbar-left">
+        <ul class="uk-navbar-nav">
+            <li class="uk-active"><a href="{% url 'dashboard:index' %}" class="uk-hover uk-text-secondary">Home</a></li>
+            <li><a href="" title="dashboards" class="uk-text-secondary">Dashboards</a></li>
+            <li class="uk-position-right uk-margin-small-right">
+                <a href="" class="uk-button uk-active">{{ user.username }}<span uk-icon="icon: triangle-down"></span></a>
+                <div class="uk-navbar-dropdown" uk-dropdown="mode: click">
+                    <ul class="uk-nav uk-navbar-dropdown-nav">
+                        <li><a href="" class="uk-text-secondary">Profile</a></li>
+                        <li class="uk-nav-divider"></li>
+                        <li><a href="{% url 'authentication:logout' %}" class="uk-text-secondary">Logout</a></li>
+                    </ul>
+                </div>
+            </li>
+        </ul>
+    </div>
+</nav>

@@ -1,0 +1,47 @@
+{% for project_info in project_list %}
+<div id="div-project-{{project_info.project.id}}">
+    <div class="uk-card uk-card-default uk-card-hover">
+        <div class="uk-card-header">
+            <div class="uk-flex-column">
+                <span class="uk-card-title">{{ project_info.project.name }}</span>
+                <span class="uk-h6">({{ project_info.project.host }})</span>
+                <div class="uk-flex-row">
+                    {% if project_info.project.connected %}
+                    <div class="uk-inline">
+                        <span class="uk-label uk-label-success">Connected</span>
+                    </div>
+                    {% else %}
+                    <div class="uk-inline uk-text-danger">
+                        <span class="uk-label uk-label-danger">Disconnected</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="uk-position-top-right uk-flex-row uk-padding-small">
+                <a href="{% url 'dashboard:detail_project' project_info.project.id %}" class="uk-button uk-button-small uk-button-default">
+                    <span uk-icon="more"></span>
+                </a>
+                <button class="uk-button uk-button-small uk-button-danger" hx-get="{% url 'dashboard:delete_project' project_info.project.id %}" hx-target="#div-main-grid">
+                    <span uk-icon="trash"></span>
+                </button>
+            </div>
+        </div>
+        <div class="uk-card-body">
+            <ul class="uk-list">
+                {% for topic in project_info.topics %}
+                <li>
+                    <div class="uk-grid uk-child-width-1-3">
+                        <span>{{ topic.id }}</span>
+                        <span>{{ topic.name }}</span>
+                    </div>
+                </li>
+                {% empty %}
+                <li>No topics...</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% empty %}
+<h3 class="uk-text-muted">No projects..</h3>
+{% endfor %}

@@ -1,0 +1,44 @@
+{% for obj in data_objects %}
+<div id="div-dataobj-{{ obj.id }}">
+    <div class="uk-card uk-card-default uk-card-hover">
+        <div class="uk-position-top-right uk-flex-row uk-padding-small">
+            <!-- <button class="uk-button uk-button-default uk-button-small" type="button"> -->
+            <a href="{% url 'dashboard:detail_dataobject' obj.id %}" class="uk-text-secondary uk-button uk-button-small uk-button-default">
+                <span uk-icon="file-text"></span>
+            </a>
+            <button hx-get="{% url 'dashboard:edit_dataobject' obj.id %}" hx-target="#edit-dataobject-dialog" class="uk-text-secondary uk-button uk-button-small uk-button-default">
+                <span uk-icon="pencil"></span>
+            </button>
+            <!-- </button> -->
+            {% with button2_icon="trash"  target_prefix="div-dataobj-" target_id=obj.id %}
+            {% url 'dashboard:delete_dataobject' obj.id as button2_url %}
+            {% include "../../partials/card_btns.html" %}
+            {% endwith %}
+        </div>
+        <div class="uk-card-header">
+            <div>
+                <h3>
+                    {{ obj.name }}
+                    <span class="uk-h6">
+                        {% if obj.path %}
+                        ({{ obj.path }})
+                        {% else %}
+                        ({{ obj.key }})
+                        {% endif %}
+                    </span>
+                </h3>
+            </div>
+        </div>
+        <div class="uk-card-body">
+            <div class="uk-margin">
+                <div class="uk-container uk-container-expand uk-container-small" id="div-dataobj-{{ obj.id }}" hx-get="{% url 'dashboard:query_dataobject_values' obj.id %}" hx-trigger="load" hx-swap="outerHTML">
+                    <div uk-spinner></div>
+                    <h5>Fetching data...</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% empty %}
+<h5 class="uk-h5">No Data Fields...</h5>
+{% endfor %}

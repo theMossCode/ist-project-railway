@@ -1,0 +1,44 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- UIkit CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uikit@3.15.22/dist/css/uikit.min.css" />
+    <!-- UIkit JS -->
+    <script src="https://cdn.jsdelivr.net/npm/uikit@3.15.22/dist/js/uikit.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/uikit@3.15.22/dist/js/uikit-icons.min.js"></script>
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.8.5" integrity="sha384-7aHh9lqPYGYZ7sTHvzP1t3BAfLhYSTy9ArHdP3Xsr9/3TlGurYgcPBoFmXX2TX/w" crossorigin="anonymous"></script>
+    <title> {% block title_block %}{% endblock title_block %} </title>
+    <!-- Bokeh -->
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-3.0.3.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.0.3.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-3.0.3.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-gl-3.0.3.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-mathjax-3.0.3.min.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+    {% include './nav/nav.html' %}
+    <!-- <div class="uk-grid"> -->
+    <div class="uk-container uk-container-expand uk-height-viewport uk-background-muted" id="div-main">
+        <div class="uk-container uk-container-expand">
+            {% block topmenublock %}
+            {% endblock topmenublock %}
+        </div>
+        <div class="uk-container uk-container-expand" id="div-main-container">
+            {% block maincontentblock %}
+            {% endblock maincontentblock %}
+        </div>
+    </div>
+    <!-- </div> -->
+    {% block modalsblock %}
+    {% endblock modalsblock %}
+    <script type="text/javascript" src="{% static 'dashboard/scripts/show_modal.js' %}"></script>
+    <script type="text/javascript" src="{% static 'dashboard/scripts/download.js' %}"></script>
+</body>
+
+</html>

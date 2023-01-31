@@ -1,0 +1,32 @@
+{% extends "../base.html" %}
+{% block topmenublock %}
+{{ topic.name }}
+<div class="uk-grid">
+    <div class="uk-width-1-1 uk-inline uk-position-z-index" uk-sticky="end:false; offset:80">
+        <ul class="uk-breadcrumb">
+            <li><a href="{% url 'dashboard:index' %}" class="uk-text-bold">Root</a></li>
+            <li><a href="{% url 'dashboard:detail_project' topic.project.id %}" class="uk-text-bold">{{ topic.project.host }}</a></li>
+            <li><a href="{% url 'dashboard:detail_topic' topic.id %}" class="uk-text-bold">{{ topic.name }}</a></li>
+            <li><a href="{% url 'dashboard:detail_dataobject' dataobject.id %}">{{ dataobject.name }}</a></li>
+        </ul>
+        <a class="uk-button uk-button-default uk-button-small uk-position-top-right uk-text-secondary" href="{% url 'dashboard:download_csv' dataobject.id %}" target="_blank" rel="noopener noreferrer">
+            <span uk-icon="icon: download"></span>
+            Download Recent Data
+        </a>
+    </div>
+    <div class="uk-width-1-1">
+        <hr>
+    </div>
+</div>
+{% endblock topmenublock %}
+{% block maincontentblock %}
+<div id="div-dataobject-data" class="uk-child-width-1-1@s" uk-grid>
+    <hr>
+    <div id="div-dataobject-swap" hx-get="{% url 'dashboard:query_dataobject_values' dataobject.id %}" hx-trigger="load" hx-swap="outerHTML">
+        <span uk-spinner></span>
+        <h5>Fetching data...</h5>
+    </div>
+</div>
+{% endblock maincontentblock %}
+{% block modalsblock %}
+{% endblock modalsblock %}

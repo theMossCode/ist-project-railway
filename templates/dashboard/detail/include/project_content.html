@@ -1,0 +1,32 @@
+{% for topic in topics %}
+<div id="div-topic-{{ topic.id }}">
+    <div class="uk-card uk-card-default uk-card-hover uk-card-small">
+        <div class="uk-position-top-right uk-flex-row uk-padding-small">
+            {% with button1_icon="more" button2_icon="trash" target_prefix="div-topic-" target_id=topic.id %}
+            {% url 'dashboard:detail_topic' topic.id as button1_url %}
+            {% url 'dashboard:delete_topic' topic.id as button2_url %}
+            {% include "../../partials/card_btns.html" %}
+            {% endwith %}
+        </div>
+        <div class="uk-card-header">
+            <div>
+                <h3>
+                    {{ topic.name }}
+                    <span class="uk-h6">({{ topic.path }})</span>
+                </h3>
+            </div>
+        </div>
+        <div class="uk-card-body">
+            <div class="uk-container uk-container-expand uk-container-large" id="div_topic{{ topic.id }}" hx-get="{% url 'dashboard:query_dataobjects' topic.id %}" hx-trigger="load" hx-swap="outerHTML">
+                <div class="uk-grid">
+                    <div uk-spinner>
+                    </div>
+                    <h5>Fetching data...</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% empty %}
+<h5 class="uk-h5">No topics...</h5>
+{% endfor %}
