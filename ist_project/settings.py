@@ -83,7 +83,7 @@ TEMPLATES = [
     },
 ]
 
-# WSGI_APPLICATION = 'ist_project.wsgi.application'
+WSGI_APPLICATION = 'ist_project.wsgi.application'
 ASGI_APPLICATION = 'ist_project.asgi.application'
 CHANNEL_LAYERS = {
     "default": {
@@ -94,15 +94,7 @@ CHANNEL_LAYERS = {
     },
 }
 
-# Database
-# https://docs.djangoproject.com/en/4.1/ref/settings/#databases
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
+CSRF_TRUSTED_ORIGINS = [RENDER_EXTERNAL_HOSTNAME, ]
 
 DATABASES = {
     'default': dj_database_url.config(
