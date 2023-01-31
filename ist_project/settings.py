@@ -94,7 +94,7 @@ CHANNEL_LAYERS = {
     },
 }
 
-CSRF_TRUSTED_ORIGINS = [RENDER_EXTERNAL_HOSTNAME, ]
+CSRF_TRUSTED_ORIGINS = ["https://"+str(RENDER_EXTERNAL_HOSTNAME), "http://"+str(RENDER_EXTERNAL_HOSTNAME)]
 
 DATABASES = {
     'default': dj_database_url.config(
