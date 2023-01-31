@@ -2,8 +2,10 @@
 # exit on error
 set -o errexit
 
-echo poetry --version
-poetry self update
+p_ver = $(poetry --version)
+echo p_ver
+poetry self install --sync
+poetry self update --dry-run
 poetry update
 poetry install
 
