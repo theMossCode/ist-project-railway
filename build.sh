@@ -3,7 +3,7 @@
 set -o errexit
 
 p_ver = $(poetry --version)
-echo p_ver
+echo '$p_ver'
 poetry self install --sync
 poetry self update --dry-run
 poetry update
