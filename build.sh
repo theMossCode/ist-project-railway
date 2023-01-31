@@ -3,7 +3,7 @@
 set -o errexit
 
 echo "$(poetry --version)"
-poetry self update --dry-run
+poetry self update
 #poetry update
 #poetry install
 
