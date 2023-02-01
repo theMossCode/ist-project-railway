@@ -27,7 +27,10 @@ SECRET_KEY = os.environ.get("SECRET_KEY", default="2f3d839abb63be78dfd3eec06e678
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = "RENDER" not in os.environ
 
-ALLOWED_HOSTS = []
+if not DEBUG:
+    ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+else:
+    ALLOWED_HOSTS = []
 
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
@@ -35,7 +38,6 @@ if RENDER_EXTERNAL_HOSTNAME:
 # Application definition
 
 INSTALLED_APPS = [
-    'daphne',
     'authentication',
     'dashboard',
     'channels',
@@ -94,11 +96,14 @@ CHANNEL_LAYERS = {
     },
 }
 
-CSRF_TRUSTED_ORIGINS = ["https://"+str(RENDER_EXTERNAL_HOSTNAME), "http://"+str(RENDER_EXTERNAL_HOSTNAME)]
+CSRF_TRUSTED_ORIGINS = ["https://" + str(RENDER_EXTERNAL_HOSTNAME), "http://" + str(RENDER_EXTERNAL_HOSTNAME)]
 
 DATABASES = {
     'default': dj_database_url.config(
-        default='postgres://collo:QNIlPa7BMWXgeDjFSwxwsfsFYlizVUH9@dpg-cfcgndg2i3mhen6f3h2g-a/mqtt_dashboard_db' if not DEBUG else "postgres://collo:QNIlPa7BMWXgeDjFSwxwsfsFYlizVUH9@dpg-cfcgndg2i3mhen6f3h2g-a.frankfurt-postgres.render.com/mqtt_dashboard_db",
+        default=os.environ.get(
+            "DATABASE_URL",
+            default="postgres://collo:QNIlPa7BMWXgeDjFSwxwsfsFYlizVUH9@dpg-cfcgndg2i3mhen6f3h2g-a."
+                    "frankfurt-postgres.render.com/mqtt_dashboard_db"),
         conn_max_age=600
     )
 }
@@ -142,16 +147,16 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
 if not DEBUG:    # Tell Django to copy statics to the `staticfiles` directory
     # in your application directory on Render.
     STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
     # Turn on WhiteNoise storage backend that takes care of compressing static files
     # and creating unique names for each version so they can safely be cached forever.
     # STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-else:
-    STATICFILES_DIRS = [
-        BASE_DIR / "static",
-    ]
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
