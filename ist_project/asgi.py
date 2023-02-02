@@ -16,14 +16,13 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ist_project.settings')
 django.setup()
 
 from channels.routing import ChannelNameRouter, ProtocolTypeRouter
-from dashboard.mqtt.consumers import MQTTConsumer
 
 application = ProtocolTypeRouter(
     {
-        "channel": ChannelNameRouter({
-            "mqtt": MQTTConsumer.as_asgi()
-        }),
-        "http": get_asgi_application(),
+        # "channel": ChannelNameRouter({
+        #     "mqtt": MQTTConsumer.as_asgi()
+        # }),
+        "http": get_asgi_application()
     }
 )
 
