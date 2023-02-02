@@ -4,8 +4,8 @@ set -o errexit
 
 poetry install
 
-python3 manage.py collectstatic
-python3 manage.py makemigrations
-python3 manage.py migrate
+poetry run python3 manage.py collectstatic
+poetry run python3 manage.py makemigrations
+poetry run python3 manage.py migrate
 
 echo "Build Complete"
