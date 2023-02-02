@@ -1,19 +1,13 @@
 import logging
 import datetime
-import pprint
 
 import pymongo
-from pymongo import MongoClient, results
-from django.conf import settings
+
+from . import mongodb_client
 
 
 def get_database(db_name):
-    client = MongoClient(settings.MONGO_DB_CONNECTION_STR)
-    return client[str(db_name)]
-
-
-def get_db_name(user):
-    return "{}_{}_db".format(str(user.username), str(user.id))
+    return mongodb_client[str(db_name)]
 
 
 def get_project_collection_name(project):
@@ -39,29 +33,31 @@ def get_document(collection, topic):
 
 
 async def add_data_obj(project, topic, data):
-    logging.debug("Add data object topic: {}, data {}".format(topic.name, data))
-    time = datetime.datetime.utcnow()
-    date = time.today().toordinal()
+    logging.debug("Add data object")
 
     db = get_database(project.db_name)
-    collection = db[get_project_collection_name(project)]
-    value_obj = dict()
-    for key, value in data.items():
-        value_obj[str(key)] = value
+    project_col = db[get_project_collection_name(project)]
+    values_obj = dict()
+    for key, value in data["values"].items():
+        values_obj[f"{key}"] = value
 
-    data_obj = {
-        "timestamp": time.timestamp(),
-        "value": value_obj
+    data_object = {
+        "timestamp": data["time"].timestamp(),
+        "value": values_obj,
     }
+
     doc_filters = {
-        "topic": topic.id,
-        "date": date,
+        "topic": topic.pk,
+        "date": data["time"].toordinal()
     }
     data_query = {
-        "$push": {"values": data_obj}
+        "$push": {
+            "values": data_object,
+        },
     }
 
-    res = collection.update_one(doc_filters, data_query, upsert=True)
+    res = project_col.update_one(doc_filters, data_query, upsert=True)
+    logging.debug(f"Add data res: {res.acknowledged}")
     return res
 
 
@@ -72,23 +68,37 @@ def get_data_objects(project, topic):
     @param topic: topic
     @return: values list
     """
+    logging.debug(f"Get data objects {project.name}, {topic.name}")
     db = get_database(project.db_name)
-    collection = db[get_project_collection_name(project)]
+    project_col = db[get_project_collection_name(project)]
     doc_filter = {
         "topic": topic.pk,
-        "date": datetime.date.today().toordinal()
+        "date": datetime.datetime.utcnow().toordinal(),
     }
+
+    # Sort array
+    sort_res = project_col.update_one(
+        doc_filter,
+        {
+            "$push": {
+                "values": {
+                    "$each": [],
+                    "$sort": {"timestamp": pymongo.DESCENDING}
+                }
+            }
+        }
+    )
+
+    logging.debug(f"Sort res {sort_res.acknowledged}")
     values_list = list()
     try:
-        cursor = collection.find(doc_filter)
-        for mongo_obj in cursor:
-            for value_obj in mongo_obj["values"]:
-                values_list.append(value_obj)
-
-        return values_list
+        for _obj in project_col.find(doc_filter):
+            for value in _obj["values"]:
+                values_list.append(value)
+            return values_list
     except Exception as e:
-        logging.debug(e)
-        return values_list
+        logging.exception(e)
+        return None
 
 
 def delete_project_collection(project):

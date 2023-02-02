@@ -1,6 +1,9 @@
+import asyncio
+import concurrent.futures
 import csv
 import logging
 import datetime
+import time
 
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse, StreamingHttpResponse
@@ -10,22 +13,22 @@ from django.utils.decorators import method_decorator
 
 from guardian.shortcuts import assign_perm, get_perms, get_objects_for_user
 
-from asgiref.sync import async_to_sync
+from asgiref.sync import async_to_sync, sync_to_async
 from channels.layers import get_channel_layer
 
 from .forms import NewProjectForm, NewTopicForm, NewDataObjectForm
 from .models import Project, Topic, DataObject
-from .mongodb import db_utils as mongodb_utils
+from .mongodb import get_db_name, db_utils
 
 from django.views.generic import TemplateView
 from django.views import View
 
 from .bokeh_utils import Plot
 
+from .mqtt import mqtt_client_manager
+
 channel_layer = get_channel_layer()
-
 detail_decorators = [login_required(login_url="authentication:login")]
-
 
 @method_decorator(detail_decorators, name="dispatch")
 class IndexView(TemplateView):
@@ -120,13 +123,14 @@ class NewProjectView(View):
     form_class = NewProjectForm
     template = "dashboard/modals/new_project.html"
 
-    def start_mqtt_client(self, user, project):
-        async_to_sync(channel_layer.send)(
-            "mqtt", {
-                "type": "client.add",
-                "project_id": project.id,
-            }
+    def start_mqtt_client(self, project):
+        mqtt_client_manager.add_client(
+            client_id=project.pk,
+            host=project.host,
+            port=project.port,
         )
+        mqtt_client_manager.connect_client(project.pk)
+        mqtt_client_manager.start_client(project.pk)
 
     def get(self, request, *args, **kwargs):
         initial = {"mqtt_port": 1883}
@@ -152,18 +156,29 @@ class NewProjectView(View):
                 port=form.cleaned_data["mqtt_port"],
                 username=form.cleaned_data["mqtt_username"],
                 password=form.cleaned_data["mqtt_password"],
-                db_name=mongodb_utils.get_db_name(user),
+                db_name=get_db_name(user),
             )
 
-            project.save()
-            assign_perm("is_owner", user, project)
-            self.start_mqtt_client(user, project)
-            return HttpResponse(status=201)
-        else:
-            if project:
-                project.delete()
+            try:
+                project.save()
+                assign_perm("is_owner", user, project)
+                mqtt_client_manager.add_client(
+                    client_id=project.pk,
+                    host=project.host,
+                    port=project.port,
+                    userdata=None
+                )
+                self.start_mqtt_client(project)
+                return HttpResponse(status=201)
+            except Exception as e:
+                logging.error(e)
+                if project:
+                    project.delete()
 
-            form.add_error(None, "Error occurred!")
+                form.add_error(None, "Unknown error!!")
+                return render(request, self.template, {"form": form})
+        else:
+            form.add_error(None, "Form not valid. Please review form and update.")
             return render(request, self.template, {"form": form})
 
 
@@ -172,13 +187,16 @@ class NewTopicView(View):
     form_class = NewTopicForm
     template = "dashboard/modals/new_topic.html"
 
-    def subscribe_mqtt_topic(self, user, project, topic):
-        async_to_sync(channel_layer.send)(
-            "mqtt", {
-                "type": "client.subscribe.topic",
-                "project_id": project.pk,
-                "topic_id": topic.pk,
-            }
+    def subscribe_mqtt_topic(self, project, topic):
+        _client = mqtt_client_manager.get_client(project.pk)
+        if not _client:
+            logging.debug("Not valid client")
+            return False
+
+        logging.debug(_client.host)
+        return async_to_sync(_client.subscribe_topic)(
+            topic=topic.path,
+            qos=topic.qos
         )
 
     def get(self, request, *args, **kwargs):
@@ -204,9 +222,7 @@ class NewTopicView(View):
             return HttpResponse(status=403)
 
         project = get_object_or_404(Project, pk=kwargs["project_id"])
-
         form = self.form_class(request.POST)
-        topic = None
         if form.is_valid():
             topic = Topic(
                 name=form.cleaned_data["name"],
@@ -217,15 +233,28 @@ class NewTopicView(View):
                 qos=form.cleaned_data["qos"],
                 project=project,
             )
-            topic.save()
-            self.subscribe_mqtt_topic(user, project, topic)
-            return HttpResponse(status=201)
-        else:
-            if topic:
-                topic.delete()
 
+            try:
+                res = self.subscribe_mqtt_topic(project, topic)
+                if not res:
+                    raise RuntimeError("Could not subscribe")
+                topic.save()
+                return HttpResponse(status=201)
+            except Exception as e:
+                logging.exception(e)
+                form.add_error(None, "Unknown error occured!")
+                if topic.id:
+                    topic.delete()
+
+                context = {
+                    "form": form,
+                    "project": project,
+                    "qos_choices": self.qos_choices,
+                }
+                return render(request, self.template, context)
+        else:
             logging.debug(form.errors)
-            form.add_error(None, "Error occurred!")
+            form.add_error(None, "Invalid form!")
             context = {
                 "form": form,
                 "project": project,
@@ -237,33 +266,29 @@ class NewTopicView(View):
 class NewDataObject(View):
     template_name = "dashboard/modals/new_dataobject.html"
     form_class = NewDataObjectForm
+    context = {
+        "format_choices": DataObject.FORMAT_CHOICES,
+        "data_types": DataObject.DATA_TYPE_CHOICES,
+    }
 
     def get(self, request, *args, **kwargs):
         topic = Topic.objects.get(pk=kwargs["topic_id"])
         form = self.form_class()
-        context = {
-            "topic": topic,
-            "format_choices": DataObject.FORMAT_CHOICES,
-            "data_types": DataObject.DATA_TYPE_CHOICES,
-            "form": form,
-        }
-        return render(request, self.template_name, context=context)
+        self.context["topic"] = topic
+        self.context["form"] = form
+        return render(request, self.template_name, context=self.context)
 
     def post(self, request, *args, **kwargs):
         dataobject = None
         topic = Topic.objects.get(pk=kwargs["topic_id"])
         form = self.form_class(request.POST)
-        context = {
-            "topic": topic,
-            "format_choices": DataObject.FORMAT_CHOICES,
-            "data_types": DataObject.DATA_TYPE_CHOICES,
-            "form": form,
-        }
+        self.context["topic"] = topic
+        self.context["form"] = form
 
         if form.is_valid():
             if (not form.cleaned_data["key"]) and (form.cleaned_data["format"] == DataObject.FORMAT_CHOICE_JSON):
                 form.add_error(None, "Key required for JSON types")
-                return render(request, self.template_name, context=context)
+                return render(request, self.template_name, context=self.context)
 
             dataobject = DataObject(
                 name=form.cleaned_data["name"],
@@ -274,16 +299,19 @@ class NewDataObject(View):
                 key=form.cleaned_data["key"],
                 topic=topic
             )
-            dataobject.save()
-            return HttpResponse(status=201)
+            try:
+                dataobject.save()
+                return HttpResponse(status=201)
+            except Exception as e:
+                logging.debug(e)
+                if dataobject:
+                    dataobject.delete()
+
+                form.add_error(None, "Unknown error occurred!")
+                return render(request, self.template_name, context=self.context)
         else:
-            if dataobject:
-                dataobject.delete()
-
-            form.add_error(None, "Error!")
-            return render(request, self.template_name, context=context)
-
-
+            form.add_error(None, "Form invalid!")
+            return render(request, self.template_name, context=self.context)
 
 
 """
@@ -306,15 +334,18 @@ class DeleteProjectView(DeleteViewBase):
     def get(self, request, *args, **kwargs):
         user = get_user(request)
         project = get_object_or_404(Project, pk=kwargs["project_id"])
+
         self.user_permissions = get_perms(user, project)
         if (("is_owner" not in self.user_permissions)
                 and ("can_delete" not in self.user_permissions)):
             return HttpResponse(status=403)
 
-        if not mongodb_utils.delete_project_collection(project):
-            return HttpResponse(status=500)
+        # if not mongodb_utils.delete_project_collection(project):
+        #     return HttpResponse(status=500)
 
-        self.disconnect_mqtt_host(project)
+        # Disconnect broker
+        mqtt_client_manager.delete_client(project.pk)
+
         project.delete()
         return self.render_template(request)
 
@@ -334,15 +365,6 @@ class DeleteProjectView(DeleteViewBase):
         }
         return render(request, self.template_name, context=context)
 
-    def disconnect_mqtt_host(self, project):
-        async_to_sync(channel_layer.send)(
-            "mqtt",
-            {
-                "type": "client.disconnect",
-                "project_id": project.pk,
-            }
-        )
-
 
 class DeleteTopicView(DeleteViewBase):
     template_name = "dashboard/detail/include/project_content.html"
@@ -352,8 +374,8 @@ class DeleteTopicView(DeleteViewBase):
         topic = get_object_or_404(Topic, pk=kwargs["topic_id"])
         project = get_object_or_404(Project, pk=topic.project.pk)
 
-        if not mongodb_utils.delete_topic_documents(project, topic):
-            return HttpResponse(status=500)
+        # if not mongodb_utils.delete_topic_documents(project, topic):
+        #     return HttpResponse(status=500)
 
         self.unsubscribe_mqtt_topic(project, topic)
         topic.delete()
@@ -386,10 +408,10 @@ class DeleteDataObject(DeleteViewBase):
         dataobject = get_object_or_404(DataObject, pk=kwargs["dataobject_id"])
         topic = get_object_or_404(Topic, pk=dataobject.topic.pk)
         project = get_object_or_404(Project, pk=topic.project.pk)
-        res = mongodb_utils.delete_dataobject(project, topic, dataobject)
-        if not mongodb_utils.delete_dataobject(project, topic, dataobject):
-            logging.debug("MongoDB delete error!")
-            return HttpResponse(status=500)
+        # res = mongodb_utils.delete_dataobject(project, topic, dataobject)
+        # if not mongodb_utils.delete_dataobject(project, topic, dataobject):
+        #     logging.debug("MongoDB delete error!")
+        #     return HttpResponse(status=500)
 
         dataobject.delete()
         return self.render_template(request, topic)
@@ -464,6 +486,14 @@ Ajax queries
 class QueryDataObjectsView(View):
     template_name = "dashboard/partials/ajax/dataobjects.html"
 
+    def get_data_objects(self, project, topic):
+        loop = asyncio.new_event_loop()
+        future = loop.create_future()
+        loop.run_until_complete(
+            async_mongodb.get_data_objects(project, topic)
+        )
+        loop.close()
+
     def get(self, request, *args, **kwargs):
         user = get_user(request)
         if not user.is_authenticated:
@@ -472,20 +502,33 @@ class QueryDataObjectsView(View):
         logging.debug("Query dataobjects")
         topic = get_object_or_404(Topic, pk=kwargs["topic_id"])
         project = get_object_or_404(Project, pk=topic.project.pk)
-        values_list = mongodb_utils.get_data_objects(project, topic)
-        data_details = list()
-        for value_obj in values_list:
-            data_detail = dict()
-            data_detail["timestamp"] = datetime.datetime.fromtimestamp(float(value_obj["timestamp"]))
-            for key, value in value_obj["value"].items():
-                data_object = get_object_or_404(DataObject, pk=key)
-                data_detail["model"] = data_object
-                data_detail["value"] = value
-                data_details.append(data_detail)
 
-        context = {
-            "data_details": data_details
-        }
+        # values_list = mongo_db_loop.run_until_complete(
+        #     async_mongodb.get_data_objects(project, topic)
+        # )
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+            t = pool.submit(
+                db_utils.get_data_objects, project, topic
+            )
+
+            values_list = t.result()
+
+        if values_list:
+            data_details = list()
+            for value_obj in values_list:
+                data_detail = dict()
+                data_detail["timestamp"] = datetime.datetime.fromtimestamp(float(value_obj["timestamp"]))
+                for key, value in value_obj["value"].items():
+                    data_object = get_object_or_404(DataObject, pk=key)
+                    data_detail["model"] = data_object
+                    data_detail["value"] = value
+                    data_details.append(data_detail)
+
+            context = {
+                "data_details": data_details
+            }
+        else:
+            context = None
 
         return render(request, self.template_name, context)
 
@@ -501,34 +544,45 @@ class QueryDataObjectValues(View):
         if not user.is_authenticated:
             return HttpResponse(status=403)
 
+        context = dict()
+
         data_object = get_object_or_404(DataObject, pk=kwargs["dataobject_id"])
         topic = get_object_or_404(Topic, pk=data_object.topic.pk)
         project = get_object_or_404(Project, pk=topic.project.pk)
-        values_list = mongodb_utils.get_data_objects(project, topic)
-        plot_x = list()
-        plot_y = list()
-        data_details = list()
-        for value_obj in values_list:
-            data_detail = dict()
-            data_detail["timestamp"] = datetime.datetime.fromtimestamp(float(value_obj["timestamp"]))
-            logging.debug(value_obj)
-            for key, value in value_obj["value"].items():
-                if int(key) != data_object.pk:
-                    continue
-                data_detail["data_object"] = data_object
-                data_detail["value"] = value
-                data_details.append(data_detail)
-                plot_x.append(data_detail["timestamp"])
-                plot_y.append(value)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+            fut = pool.submit(
+                db_utils.get_data_objects, project, topic
+            )
 
-        plot = Plot(x_list=plot_x[:200], y_list=plot_y[:200])
-        plot.plot_timeseries()
-        bokeh_script, bokeh_div = plot.get_components()
-        context = {
-            "data_list": data_details,
-            "bokeh_script": bokeh_script,
-            "bokeh_div": bokeh_div,
-        }
+            values_list = fut.result()
+
+        if values_list:
+            plot_x = list()
+            plot_y = list()
+            data_details = list()
+            for value_obj in values_list:
+                data_detail = dict()
+                data_detail["timestamp"] = datetime.datetime.fromtimestamp(float(value_obj["timestamp"]))
+                logging.debug(value_obj)
+                for key, value in value_obj["value"].items():
+                    if int(key) != data_object.pk:
+                        continue
+                    data_detail["data_object"] = data_object
+                    data_detail["value"] = value
+                    data_details.append(data_detail)
+                    plot_x.append(data_detail["timestamp"])
+                    plot_y.append(value)
+
+            plot = Plot(x_list=plot_x, y_list=plot_y)
+            plot.plot_timeseries()
+            bokeh_script, bokeh_div = plot.get_components()
+            context = {
+                "data_list": data_details,
+                "bokeh_script": bokeh_script,
+                "bokeh_div": bokeh_div,
+            }
+        else:
+            context = None
 
         return render(request, self.template_name, context)
 
@@ -568,14 +622,20 @@ class DownloadView(View):
 class RefreshConnectionsView(View):
     template_name = "dashboard/index/include/index_content.html"
     def send_mqtt_consumer_refresh(self):
-        async_to_sync(channel_layer.send)(
-            "mqtt",
-            {
-                "type": "client.init",
-            }
-        )
+        logging.debug("Refresh client connections")
+        mqtt_client_manager.refresh_clients()
 
     def get(self, request, *args, **kwargs):
+        projects = Project.objects.all()
+        for project in projects:
+            _client = mqtt_client_manager.get_client(project.pk)
+            if not _client:
+                logging.debug(f"Add client {project.pk}")
+                mqtt_client_manager.add_client(
+                    client_id=project.pk,
+                    host=project.host,
+                    port=project.port
+                )
         self.send_mqtt_consumer_refresh()
         projects = Project.objects.all()[:10]
         project_list = list()
