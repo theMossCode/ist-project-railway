@@ -5,6 +5,7 @@ import json
 import threading
 import concurrent.futures
 
+import django.db.models
 from paho.mqtt import client
 from ..models import Project, Topic, DataObject
 from ..mongodb import db_utils
@@ -34,8 +35,6 @@ class MQTTClient(client.Client):
         self.db_thread = threading.Thread(target=self._update_db_thread_fun)
         self.db_thread.daemon = True
         self.db_thread.start()
-
-        self.db_thread_event_loop = asyncio.new_event_loop()
 
     async def connect_broker(self):
         """
@@ -87,6 +86,19 @@ class MQTTClient(client.Client):
     # Connected callback
     def _connected(self, client_ptr, userdata, flags, rc):
         logging.debug("Connected {}".format(self.host))
+        project = Project.objects.get(pk=self.id)
+        topics = Topic.objects.filter(project=project)
+        if len(topics) <= 0:
+            return
+
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            futures = [pool.submit(
+                async_to_sync(self.subscribe_topic), topic.path, topic.qos,
+            ) for topic in topics]
+
+            for f in concurrent.futures.as_completed(futures):
+                logging.debug(f.result())
+
 
     # Disconnected callback
     def _disconnected(self, client_ptr, userdata, rc):
@@ -208,14 +220,15 @@ class MQTTClient(client.Client):
                 t_fut = list()
                 for _ in range(len(self.message_queue)):
                     message = self.message_queue.pop()
-                    project = Project.objects.get(pk=self.id)
-                    topic = Topic.objects.get(pk=message["topic_id"])
-                    mongodb_msg = message["message"]
-                    if (not project) or (not topic):
-                        logging.error("project or topic not valid")
+                    try:
+                        project = Project.objects.get(pk=self.id)
+                        topic = Topic.objects.get(pk=message["topic_id"])
+                    except django.db.models.ObjectDoesNotExist:
+                        logging.error("Project or topic does not exist")
                         continue
 
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+                    mongodb_msg = message["message"]
+                    with concurrent.futures.ThreadPoolExecutor() as pool:
                         fut = pool.submit(
                             async_to_sync(db_utils.add_data_obj), project, topic, mongodb_msg
                         )
@@ -286,7 +299,7 @@ class MQTTClientManager:
     def delete_client(self, client_id):
         _client = self.get_client(client_id)
         if _client:
-            async_to_sync(_client.disconnect_broker)()
+            self.disconnect_client(client_id)
             self.client_list.remove(_client)
             return True
 

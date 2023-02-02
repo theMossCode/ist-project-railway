@@ -50,6 +50,11 @@ async def add_data_obj(project, topic, data):
         "topic": topic.pk,
         "date": data["time"].toordinal()
     }
+    # data_query = {
+    #     "$push": {
+    #         "values": data_object,
+    #     },
+    # }
     data_query = {
         "$push": {
             "values": data_object,
@@ -61,7 +66,7 @@ async def add_data_obj(project, topic, data):
     return res
 
 
-def get_data_objects(project, topic):
+def get_data_objects(project, topic, limit=100):
     """
     Get data objects
     @param project: project
@@ -76,28 +81,42 @@ def get_data_objects(project, topic):
         "date": datetime.datetime.utcnow().toordinal(),
     }
 
+    aggregation = [
+        {"$match": {
+            "$and": [{"topic": topic.pk}, {"date": datetime.datetime.utcnow().toordinal()}]
+        }},
+        {"$sort": {"values.timestamp": pymongo.DESCENDING}},
+        {"$limit": limit},
+    ]
+
     # Sort array
-    sort_res = project_col.update_one(
-        doc_filter,
-        {
-            "$push": {
-                "values": {
-                    "$each": [],
-                    "$sort": {"timestamp": pymongo.DESCENDING}
-                }
-            }
-        }
-    )
+    sort_res = project_col.update_one(doc_filter,
+                                      {"$push": {"values": {
+                                           "$each": [],
+                                           "$sort": {"timestamp": pymongo.DESCENDING}
+                                       }}})
 
     logging.debug(f"Sort res {sort_res.acknowledged}")
-    values_list = list()
     try:
-        for _obj in project_col.find(doc_filter):
-            for value in _obj["values"]:
-                values_list.append(value)
-            return values_list
+        cursor = get_data_objects_by_aggregation(project, aggregation)
+        logging.debug(cursor)
+        for _obj in cursor:
+            values_array = _obj["values"]
+            return values_array
     except Exception as e:
         logging.exception(e)
+        return None
+
+
+def get_data_objects_by_aggregation(project, aggregation):
+    db = get_database(project.db_name)
+    project_col = db[get_project_collection_name(project)]
+
+    try:
+        res = project_col.aggregate(aggregation)
+        return res
+    except Exception as e:
+        logging.error(f"Exception occured : {e}")
         return None
 
 
@@ -123,7 +142,7 @@ def delete_topic_documents(project, topic):
         return res.acknowledged
     except Exception as e:
         logging.debug(e)
-        return None
+        return False
 
 
 def delete_dataobject(project, topic, dataobject):
@@ -133,12 +152,12 @@ def delete_dataobject(project, topic, dataobject):
         "topic": topic.pk,
     }
     query = {
-        "$unset": {"values.$[].{}" : {"$exists": True}}
+        "$unset": {f"values.$[].{dataobject.pk}": {"$exists": True}}
     }
     try:
         res = collection.update_many(doc_filter, query)
         return res.acknowledged
     except Exception as e:
         logging.debug("Update dataobject exception {}".format(e))
-        return None
+        return False
 

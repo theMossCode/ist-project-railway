@@ -5,6 +5,7 @@ import logging
 import datetime
 import time
 
+import pymongo
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse, StreamingHttpResponse
 from django.contrib.auth.decorators import login_required
@@ -19,13 +20,13 @@ from channels.layers import get_channel_layer
 from .forms import NewProjectForm, NewTopicForm, NewDataObjectForm
 from .models import Project, Topic, DataObject
 from .mongodb import get_db_name, db_utils
+from .bokeh_utils import Plot
+from .mqtt import mqtt_client_manager
+from . import utils
 
 from django.views.generic import TemplateView
 from django.views import View
 
-from .bokeh_utils import Plot
-
-from .mqtt import mqtt_client_manager
 
 channel_layer = get_channel_layer()
 detail_decorators = [login_required(login_url="authentication:login")]
@@ -51,7 +52,7 @@ class IndexView(TemplateView):
         try:
             projects_list = list()
             projects = get_objects_for_user(user, self.project_required_permissions, any_perm=True)
-            logging.debug(projects)
+            # logging.debug(projects)
             for project in projects:
                 topics = Topic.objects.filter(project=project)
                 projects_entry = {
@@ -89,7 +90,7 @@ class DetailTopicView(TemplateView):
         try:
             context["topic"] = Topic.objects.get(pk=kwargs["topic_id"])
             context["data_objects"] = DataObject.objects.filter(topic=context["topic"])
-            logging.debug(context)
+            # logging.debug(context)
             return context
         except Exception as e:
             logging.debug(e)
@@ -107,7 +108,7 @@ class DetailDataObjectView(TemplateView):
             context["topic"] = Topic.objects.get(pk=context["dataobject"].topic.pk)
             context["project"] = Project.objects.get(pk=context["topic"].project.pk)
             context["data_duration"] = 30
-            logging.debug(context)
+            # logging.debug(context)
             return context
         except Exception as e:
             logging.debug(e)
@@ -193,7 +194,7 @@ class NewTopicView(View):
             logging.debug("Not valid client")
             return False
 
-        logging.debug(_client.host)
+        # logging.debug(_client.host)
         return async_to_sync(_client.subscribe_topic)(
             topic=topic.path,
             qos=topic.qos
@@ -253,7 +254,7 @@ class NewTopicView(View):
                 }
                 return render(request, self.template, context)
         else:
-            logging.debug(form.errors)
+            # logging.debug(form.errors)
             form.add_error(None, "Invalid form!")
             context = {
                 "form": form,
@@ -340,12 +341,15 @@ class DeleteProjectView(DeleteViewBase):
                 and ("can_delete" not in self.user_permissions)):
             return HttpResponse(status=403)
 
-        # if not mongodb_utils.delete_project_collection(project):
-        #     return HttpResponse(status=500)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            fut = pool.submit(
+                db_utils.delete_project_collection, project
+            )
 
-        # Disconnect broker
+            if not fut.result():
+                return HttpResponse(status=500)
+
         mqtt_client_manager.delete_client(project.pk)
-
         project.delete()
         return self.render_template(request)
 
@@ -370,12 +374,15 @@ class DeleteTopicView(DeleteViewBase):
     template_name = "dashboard/detail/include/project_content.html"
 
     def get(self, request, *args, **kwargs):
-        user = get_user(request)
         topic = get_object_or_404(Topic, pk=kwargs["topic_id"])
         project = get_object_or_404(Project, pk=topic.project.pk)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            fut = pool.submit(
+                db_utils.delete_topic_documents, project, topic
+            )
 
-        # if not mongodb_utils.delete_topic_documents(project, topic):
-        #     return HttpResponse(status=500)
+            if not fut.result():
+                return HttpResponse(status=500)
 
         self.unsubscribe_mqtt_topic(project, topic)
         topic.delete()
@@ -390,30 +397,31 @@ class DeleteTopicView(DeleteViewBase):
         return render(request, self.template_name, context=context)
 
     def unsubscribe_mqtt_topic(self, project, topic):
-        async_to_sync(channel_layer.send)(
-            "mqtt",
-            {
-                "type": "client.unsubscribe.topic",
-                "project_id": project.pk,
-                "topic_path": topic.path,
-            }
-        )
+        _client = mqtt_client_manager.get_client(project.pk)
+        if not _client:
+            logging.error("No valid client")
+            return
+
+        async_to_sync(_client.unsubscribe_topic)(topic.path)
 
 
 class DeleteDataObject(DeleteViewBase):
     template_name = "dashboard/detail/include/topic_content.html"
 
     def get(self, request, *args, **kwargs):
-        user = get_user(request)
-        dataobject = get_object_or_404(DataObject, pk=kwargs["dataobject_id"])
-        topic = get_object_or_404(Topic, pk=dataobject.topic.pk)
+        data_object = get_object_or_404(DataObject, pk=kwargs["dataobject_id"])
+        topic = get_object_or_404(Topic, pk=data_object.topic.pk)
         project = get_object_or_404(Project, pk=topic.project.pk)
-        # res = mongodb_utils.delete_dataobject(project, topic, dataobject)
-        # if not mongodb_utils.delete_dataobject(project, topic, dataobject):
-        #     logging.debug("MongoDB delete error!")
-        #     return HttpResponse(status=500)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            fut = pool.submit(
+                db_utils.delete_dataobject, project, topic, data_object
+            )
 
-        dataobject.delete()
+            res = fut.result()
+            if not res:
+                return HttpResponse(status=500)
+
+        data_object.delete()
         return self.render_template(request, topic)
 
     def render_template(self, request, topic):
@@ -486,14 +494,6 @@ Ajax queries
 class QueryDataObjectsView(View):
     template_name = "dashboard/partials/ajax/dataobjects.html"
 
-    def get_data_objects(self, project, topic):
-        loop = asyncio.new_event_loop()
-        future = loop.create_future()
-        loop.run_until_complete(
-            async_mongodb.get_data_objects(project, topic)
-        )
-        loop.close()
-
     def get(self, request, *args, **kwargs):
         user = get_user(request)
         if not user.is_authenticated:
@@ -503,9 +503,6 @@ class QueryDataObjectsView(View):
         topic = get_object_or_404(Topic, pk=kwargs["topic_id"])
         project = get_object_or_404(Project, pk=topic.project.pk)
 
-        # values_list = mongo_db_loop.run_until_complete(
-        #     async_mongodb.get_data_objects(project, topic)
-        # )
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
             t = pool.submit(
                 db_utils.get_data_objects, project, topic
@@ -532,9 +529,6 @@ class QueryDataObjectsView(View):
 
         return render(request, self.template_name, context)
 
-    def sort_func(self, e):
-        return e["timestamp"]
-
 
 class QueryDataObjectValues(View):
     template_name = "dashboard/partials/ajax/dataobject_values.html"
@@ -543,8 +537,6 @@ class QueryDataObjectValues(View):
         user = get_user(request)
         if not user.is_authenticated:
             return HttpResponse(status=403)
-
-        context = dict()
 
         data_object = get_object_or_404(DataObject, pk=kwargs["dataobject_id"])
         topic = get_object_or_404(Topic, pk=data_object.topic.pk)
@@ -563,7 +555,6 @@ class QueryDataObjectValues(View):
             for value_obj in values_list:
                 data_detail = dict()
                 data_detail["timestamp"] = datetime.datetime.fromtimestamp(float(value_obj["timestamp"]))
-                logging.debug(value_obj)
                 for key, value in value_obj["value"].items():
                     if int(key) != data_object.pk:
                         continue
@@ -589,34 +580,55 @@ class QueryDataObjectValues(View):
 
 class DownloadView(View):
     def get(self, request, *args, **kwargs):
-        return HttpResponse(status=404)
-        # dataobject = DataObject.objects.get(pk=kwargs["dataobject_id"])
-        # topic = Topic.objects.get(pk=dataobject.topic.pk)
-        # project = Topic.objects.get(pk=topic.project.pk)
-        # start_time = datetime.datetime.utcnow() - datetime.timedelta(hours=24)
-        # entries_num = 500
-        #
-        # aggregation = [
-        #     {"$match": {"data.{}".format(dataobject.pk): {"$exists": True}}},
-        #     {"$limit": entries_num},
-        # ]
-        #
-        # dataobjects_list = list(
-        #     mongodb_utils.get_data_objects(project, topic, aggregation=aggregation)
-        # )
-        #
-        # csv_rows = (
-        #     ["{}".format(data["time"]), "{}".format(data["data"][str(dataobject.pk)])] for data in dataobjects_list
-        # )
-        # csv_writer_buffer = utils.CSVFileRowEcho()
-        # csv_writer = csv.writer(csv_writer_buffer)
-        # return StreamingHttpResponse(
-        #     (csv_writer.writerow(row) for row in csv_rows),
-        #     content_type="text/csv",
-        #     headers={"Content-Disposition": "attachment; filename={}_{}".format(
-        #         dataobject.id, datetime.datetime.utcnow().toordinal())
-        #     }
-        # )
+        dataobject = DataObject.objects.get(pk=kwargs["dataobject_id"])
+        topic = Topic.objects.get(pk=dataobject.topic.pk)
+        project = Project.objects.get(pk=topic.project.pk)
+        start_time = datetime.datetime.utcnow() - datetime.timedelta(hours=24)
+        entries_num = 100
+
+        aggregation = [
+            {"$match": {
+                "$and": [{"topic": topic.pk}, {"date": datetime.datetime.utcnow().toordinal()}]
+            }},
+            {"$sort": {"values.timestamp": pymongo.DESCENDING}},
+            {"$limit": entries_num},
+            {"$project": {"_id": 0, "values.timestamp": 1, f"values.value.{dataobject.pk}": 1}},
+        ]
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            fut = pool.submit(
+                db_utils.get_data_objects_by_aggregation, project, aggregation
+            )
+
+            cursor = fut.result()
+
+        if not cursor:
+            return HttpResponse(status=500)
+
+        csv_rows = list()
+        for obj in cursor:
+            values = obj["values"]
+            for elem in values:
+                val_obj = elem["value"]
+                val = val_obj.get(f"{dataobject.id}", None)
+                if not val:
+                    continue
+
+                obj_time = datetime.datetime.fromtimestamp(elem["timestamp"])
+                csv_row = (
+                    f"{obj_time}", f"{val}"
+                )
+                csv_rows.append(csv_row)
+
+        csv_writer_buffer = utils.CSVFileRowEcho()
+        csv_writer = csv.writer(csv_writer_buffer)
+        return StreamingHttpResponse(
+            (csv_writer.writerow(row) for row in csv_rows),
+            content_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename={}_{}".format(
+                dataobject.id, datetime.datetime.utcnow().toordinal())
+            }
+        )
 
 
 class RefreshConnectionsView(View):
