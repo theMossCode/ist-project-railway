@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- By Sam Herbert (@sherb), for everyone. More @ http://goo.gl/7AJzbL -->
+
+<svg
+   width="38"
+   height="38"
+   viewBox="0 0 38 38"
+   version="1.1"
+   id="svg313"
+   sodipodi:docname="tail-spin.svg"
+   inkscape:version="1.2.1 (9c6d41e410, 2022-07-14)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview315"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="10.578947"
+     inkscape:cx="2.3159204"
+     inkscape:cy="13.375622"
+     inkscape:window-width="1920"
+     inkscape:window-height="991"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg313" />
+  <defs
+     id="defs304">
+    <linearGradient
+       x1="8.042%"
+       y1="0%"
+       x2="65.682%"
+       y2="23.865%"
+       id="a">
+      <stop
+         stop-color="#fff"
+         stop-opacity="0"
+         offset="0%"
+         id="stop297" />
+      <stop
+         stop-color="#fff"
+         stop-opacity=".631"
+         offset="63.146%"
+         id="stop299" />
+      <stop
+         stop-color="#fff"
+         offset="100%"
+         id="stop301" />
+    </linearGradient>
+  </defs>
+  <g
+     fill="none"
+     fill-rule="evenodd"
+     id="g311"
+     style="stroke:#000000;stroke-opacity:1">
+    <g
+       transform="translate(1 1)"
+       id="g309"
+       style="stroke:#000000;stroke-opacity:1">
+      <path
+         d="M36 18c0-9.94-8.06-18-18-18"
+         id="Oval-2"
+         stroke="url(#a)"
+         stroke-width="2"
+         style="stroke:#000000;stroke-opacity:1">
+        <animateTransform
+           attributeName="transform"
+           type="rotate"
+           from="0 18 18"
+           to="360 18 18"
+           dur="0.9s"
+           repeatCount="indefinite" />
+      </path>
+      <circle
+         fill="#fff"
+         cx="36"
+         cy="18"
+         r="1"
+         id="circle307"
+         style="stroke:#000000;stroke-opacity:1">
+        <animateTransform
+           attributeName="transform"
+           type="rotate"
+           from="0 18 18"
+           to="360 18 18"
+           dur="0.9s"
+           repeatCount="indefinite" />
+      </circle>
+    </g>
+  </g>
+</svg>

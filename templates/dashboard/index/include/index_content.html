@@ -1,12 +1,13 @@
+{% load static %}
 {% for project_info in project_list %}
-<div id="div-project-{{project_info.project.id}}">
+<div id="div-project-{{project_info.project_params.project.id}}">
     <div class="uk-card uk-card-default uk-card-hover">
         <div class="uk-card-header">
             <div class="uk-flex-column">
-                <span class="uk-card-title">{{ project_info.project.name }}</span>
-                <span class="uk-h6">({{ project_info.project.host }})</span>
+                <span class="uk-card-title">{{ project_info.project_params.project.name }}</span>
+                <span class="uk-h6">({{ project_info.project_params.project.host }})</span>
                 <div class="uk-flex-row">
-                    {% if project_info.project.connected %}
+                    {% if project_info.project_params.connected %}
                     <div class="uk-inline">
                         <span class="uk-label uk-label-success">Connected</span>
                     </div>
@@ -15,13 +16,14 @@
                         <span class="uk-label uk-label-danger">Disconnected</span>
                     </div>
                     {% endif %}
+                    <img id="deleting_indicator" class="htmx-indicator" src="{% static 'svg-loaders/spinning-circles.svg' %}" />
                 </div>
             </div>
             <div class="uk-position-top-right uk-flex-row uk-padding-small">
-                <a href="{% url 'dashboard:detail_project' project_info.project.id %}" class="uk-button uk-button-small uk-button-default">
+                <a href="{% url 'dashboard:detail_project' project_info.project_params.project.id %}" class="uk-button uk-button-small uk-button-default">
                     <span uk-icon="more"></span>
                 </a>
-                <button class="uk-button uk-button-small uk-button-danger" hx-get="{% url 'dashboard:delete_project' project_info.project.id %}" hx-target="#div-main-grid">
+                <button class="uk-button uk-button-small uk-button-danger" hx-get="{% url 'dashboard:delete_project' project_info.project_params.project.id %}" hx-target="#div-main-grid" hx-indicator="#deleting_indicator">
                     <span uk-icon="trash"></span>
                 </button>
             </div>

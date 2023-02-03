@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- By Sam Herbert (@sherb), for everyone. More @ http://goo.gl/7AJzbL -->
+
+<svg
+   width="45"
+   height="45"
+   viewBox="0 0 45 45"
+   stroke="#fff"
+   version="1.1"
+   id="svg10"
+   sodipodi:docname="rings.svg"
+   inkscape:version="1.2.1 (9c6d41e410, 2022-07-14)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs14" />
+  <sodipodi:namedview
+     id="namedview12"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="25.267283"
+     inkscape:cx="17.591919"
+     inkscape:cy="27.090368"
+     inkscape:window-width="1920"
+     inkscape:window-height="991"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g8" />
+  <g
+     fill="none"
+     fill-rule="evenodd"
+     transform="translate(1 1)"
+     stroke-width="2"
+     id="g8"
+     style="fill:#000000">
+    <circle
+       cx="22"
+       cy="22"
+       r="6"
+       stroke-opacity="0"
+       id="circle2"
+       style="fill:#333333">
+      <animate
+         attributeName="r"
+         begin="1.5s"
+         dur="3s"
+         values="6;22"
+         calcMode="linear"
+         repeatCount="indefinite" />
+      <animate
+         attributeName="stroke-opacity"
+         begin="1.5s"
+         dur="3s"
+         values="1;0"
+         calcMode="linear"
+         repeatCount="indefinite" />
+      <animate
+         attributeName="stroke-width"
+         begin="1.5s"
+         dur="3s"
+         values="2;0"
+         calcMode="linear"
+         repeatCount="indefinite" />
+    </circle>
+    <circle
+       cx="22"
+       cy="22"
+       r="6"
+       stroke-opacity="0"
+       id="circle4"
+       style="fill:#333333">
+      <animate
+         attributeName="r"
+         begin="3s"
+         dur="3s"
+         values="6;22"
+         calcMode="linear"
+         repeatCount="indefinite" />
+      <animate
+         attributeName="stroke-opacity"
+         begin="3s"
+         dur="3s"
+         values="1;0"
+         calcMode="linear"
+         repeatCount="indefinite" />
+      <animate
+         attributeName="stroke-width"
+         begin="3s"
+         dur="3s"
+         values="2;0"
+         calcMode="linear"
+         repeatCount="indefinite" />
+    </circle>
+    <circle
+       cx="22"
+       cy="22"
+       r="8"
+       id="circle6"
+       style="fill:#333333">
+      <animate
+         attributeName="r"
+         begin="0s"
+         dur="1.5s"
+         values="6;1;2;3;4;5;6"
+         calcMode="linear"
+         repeatCount="indefinite" />
+    </circle>
+  </g>
+</svg>

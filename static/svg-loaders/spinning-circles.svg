@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- By Sam Herbert (@sherb), for everyone. More @ http://goo.gl/7AJzbL -->
+
+<svg
+   width="58"
+   height="58"
+   viewBox="0 0 58 58"
+   version="1.1"
+   id="svg22"
+   sodipodi:docname="spinning-circles.svg"
+   inkscape:version="1.2.1 (9c6d41e410, 2022-07-14)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs26" />
+  <sodipodi:namedview
+     id="namedview24"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="13.862069"
+     inkscape:cx="29.03607"
+     inkscape:cy="29.03607"
+     inkscape:window-width="1920"
+     inkscape:window-height="991"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg22" />
+  <g
+     fill="none"
+     fill-rule="evenodd"
+     id="g20"
+     style="fill:#1a1a1a">
+    <g
+       transform="translate(2 1)"
+       stroke="#FFF"
+       stroke-width="1.5"
+       id="g18"
+       style="fill:#1a1a1a">
+      <circle
+         cx="42.601"
+         cy="11.462"
+         r="5"
+         fill-opacity="1"
+         fill="#fff"
+         id="circle2"
+         style="fill:#1a1a1a">
+        <animate
+           attributeName="fill-opacity"
+           begin="0s"
+           dur="1.3s"
+           values="1;0;0;0;0;0;0;0"
+           calcMode="linear"
+           repeatCount="indefinite" />
+      </circle>
+      <circle
+         cx="49.063"
+         cy="27.063"
+         r="5"
+         fill-opacity="0"
+         fill="#fff"
+         id="circle4"
+         style="fill:#1a1a1a">
+        <animate
+           attributeName="fill-opacity"
+           begin="0s"
+           dur="1.3s"
+           values="0;1;0;0;0;0;0;0"
+           calcMode="linear"
+           repeatCount="indefinite" />
+      </circle>
+      <circle
+         cx="42.601"
+         cy="42.663"
+         r="5"
+         fill-opacity="0"
+         fill="#fff"
+         id="circle6"
+         style="fill:#1a1a1a">
+        <animate
+           attributeName="fill-opacity"
+           begin="0s"
+           dur="1.3s"
+           values="0;0;1;0;0;0;0;0"
+           calcMode="linear"
+           repeatCount="indefinite" />
+      </circle>
+      <circle
+         cx="27"
+         cy="49.125"
+         r="5"
+         fill-opacity="0"
+         fill="#fff"
+         id="circle8"
+         style="fill:#1a1a1a">
+        <animate
+           attributeName="fill-opacity"
+           begin="0s"
+           dur="1.3s"
+           values="0;0;0;1;0;0;0;0"
+           calcMode="linear"
+           repeatCount="indefinite" />
+      </circle>
+      <circle
+         cx="11.399"
+         cy="42.663"
+         r="5"
+         fill-opacity="0"
+         fill="#fff"
+         id="circle10"
+         style="fill:#1a1a1a">
+        <animate
+           attributeName="fill-opacity"
+           begin="0s"
+           dur="1.3s"
+           values="0;0;0;0;1;0;0;0"
+           calcMode="linear"
+           repeatCount="indefinite" />
+      </circle>
+      <circle
+         cx="4.938"
+         cy="27.063"
+         r="5"
+         fill-opacity="0"
+         fill="#fff"
+         id="circle12"
+         style="fill:#1a1a1a">
+        <animate
+           attributeName="fill-opacity"
+           begin="0s"
+           dur="1.3s"
+           values="0;0;0;0;0;1;0;0"
+           calcMode="linear"
+           repeatCount="indefinite" />
+      </circle>
+      <circle
+         cx="11.399"
+         cy="11.462"
+         r="5"
+         fill-opacity="0"
+         fill="#fff"
+         id="circle14"
+         style="fill:#1a1a1a">
+        <animate
+           attributeName="fill-opacity"
+           begin="0s"
+           dur="1.3s"
+           values="0;0;0;0;0;0;1;0"
+           calcMode="linear"
+           repeatCount="indefinite" />
+      </circle>
+      <circle
+         cx="27"
+         cy="5"
+         r="5"
+         fill-opacity="0"
+         fill="#fff"
+         id="circle16"
+         style="fill:#1a1a1a">
+        <animate
+           attributeName="fill-opacity"
+           begin="0s"
+           dur="1.3s"
+           values="0;0;0;0;0;0;0;1"
+           calcMode="linear"
+           repeatCount="indefinite" />
+      </circle>
+    </g>
+  </g>
+</svg>

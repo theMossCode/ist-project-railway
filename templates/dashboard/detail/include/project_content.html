@@ -1,3 +1,4 @@
+{% load static %}
 {% for topic in topics %}
 <div id="div-topic-{{ topic.id }}">
     <div class="uk-card uk-card-default uk-card-hover uk-card-small">
@@ -19,9 +20,10 @@
         <div class="uk-card-body">
             <div class="uk-container uk-container-expand uk-container-large" id="div_topic{{ topic.id }}" hx-get="{% url 'dashboard:query_dataobjects' topic.id %}" hx-trigger="load" hx-swap="outerHTML">
                 <div class="uk-grid">
-                    <div uk-spinner>
+                    <div>
+                        <img id="new-indicator" class="htmx-indicator" src="{% static 'svg-loaders/tail-spin.svg' %}">
+                        <span class="uk-container">Fetching Data...</span>
                     </div>
-                    <h5>Fetching data...</h5>
                 </div>
             </div>
         </div>
