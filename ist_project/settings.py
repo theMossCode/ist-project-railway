@@ -119,8 +119,7 @@ if DEBUG:
     MONGODB_CONNECTION_URI = \
     "mongodb://localhost:27017"
 else:
-    MONGODB_CONNECTION_URI = \
-    "mongodb+srv://admin:pHgr73y2MYJ2n2p@mqttdashdevelopment.s9q72dn.mongodb.net/admin"
+    MONGODB_CONNECTION_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
 
 
 # Password validation
@@ -161,12 +160,7 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
-if not DEBUG:    # Tell Django to copy statics to the `staticfiles` directory
-    # in your application directory on Render.
-    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-    # Turn on WhiteNoise storage backend that takes care of compressing static files
-    # and creating unique names for each version so they can safely be cached forever.
-    # STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 
 # Default primary key field type

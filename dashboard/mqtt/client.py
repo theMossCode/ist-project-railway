@@ -21,6 +21,7 @@ class MQTTClient(client.Client):
         self.id = project_id
         self.host = host
         self.port = port
+        self.connected = False
 
         #callbacks
         self.on_connect = self._connected
@@ -50,7 +51,7 @@ class MQTTClient(client.Client):
         Disconnect server \n
         :param reason: disconnect reason
         """
-        self.disconnect()
+        await sync_to_async(self.disconnect)()
 
     async def subscribe_topic(self, topic, qos=2):
         """
@@ -88,6 +89,7 @@ class MQTTClient(client.Client):
         logging.debug("Connected {}".format(self.host))
         project = Project.objects.get(pk=self.id)
         topics = Topic.objects.filter(project=project)
+        self.connected = True
         if len(topics) <= 0:
             return
 
@@ -99,10 +101,10 @@ class MQTTClient(client.Client):
             for f in concurrent.futures.as_completed(futures):
                 logging.debug(f.result())
 
-
     # Disconnected callback
     def _disconnected(self, client_ptr, userdata, rc):
         logging.debug("disconnected {}".format(self.host))
+        self.connected = False
 
     # Message received callback
     def _message_received(self, client_ptr, userdata, message):
@@ -118,7 +120,6 @@ class MQTTClient(client.Client):
                                                       wild_card_sub_topic_path)
 
             if mongodb_data:
-                logging.debug("Has data")
                 message = {
                     "topic_id": topic.pk,
                     "message": {
@@ -128,7 +129,6 @@ class MQTTClient(client.Client):
                 }
                 self.message_queue.append(message)
                 self.db_thread_msg_received_event.set()
-                # self.db_thread_event_loop.run_until_complete(async_mongodb.add_data_object(project, topic, message["message"]))
         except Exception as e:
             logging.error(e)
 
@@ -160,7 +160,7 @@ class MQTTClient(client.Client):
         try:
             processed_data = json.loads(data)
         except Exception as e:
-            logging.error(e)
+            # logging.error(e)
             processed_data = data.decode()
 
         mongodb_data = dict()
@@ -188,7 +188,7 @@ class MQTTClient(client.Client):
                 if data_object.key in data.keys():
                     raw_data = data[str(data_object.key)]
             except Exception as e:
-                logging.error(e)
+                # logging.error(e)
                 return None
         elif data_object.format == data_object.FORMAT_CHOICE_SINGLE_VARIABLE:
             raw_data = data
@@ -207,7 +207,7 @@ class MQTTClient(client.Client):
                     if isinstance(raw_data, bool):
                         return raw_data
             except Exception as e:
-                logging.exception(e)
+                # logging.exception(e)
                 return None
 
         return None
@@ -234,7 +234,7 @@ class MQTTClient(client.Client):
                         )
 
                         res = fut.result()
-                        logging.debug(res)
+                        # logging.debug(res)
 
                 self.db_thread_msg_received_event.clear()
 
@@ -250,9 +250,8 @@ class MQTTClientManager:
         return len(self.client_list)
 
     def get_client(self, client_id):
-        logging.debug(self.client_list)
         for temp_client in self.client_list:
-            logging.debug(temp_client.id)
+            # logging.debug(temp_client.id)
             if temp_client.id == client_id:
                 return temp_client
 
@@ -260,7 +259,7 @@ class MQTTClientManager:
 
     def refresh_clients(self):
         for _client in self.client_list:
-            if not _client.is_connected():
+            if not _client.connected:
                 self.connect_client(_client.id)
                 self.start_client(_client.id)
 
@@ -282,7 +281,6 @@ class MQTTClientManager:
         temp_client = self.get_client(client_id)
         if temp_client:
             temp_client.loop_start()
-            logging.debug(f"active threads : {threading.active_count()}")
             return True
 
         return False
@@ -290,7 +288,7 @@ class MQTTClientManager:
     def disconnect_client(self, client_id):
         temp_client = self.get_client(client_id)
         if temp_client:
-            temp_client.disconnect_broker()
+            async_to_sync(temp_client.disconnect_broker)()
             temp_client.loop_stop()
             return True
 

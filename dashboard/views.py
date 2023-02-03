@@ -31,6 +31,7 @@ from django.views import View
 channel_layer = get_channel_layer()
 detail_decorators = [login_required(login_url="authentication:login")]
 
+
 @method_decorator(detail_decorators, name="dispatch")
 class IndexView(TemplateView):
     template_name = "dashboard/index/index.html"
@@ -43,20 +44,29 @@ class IndexView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user = get_user(self.request)
-        logging.debug(user)
         context["user"] = user
         context["project_list"] = self.get_projects_list(user)
+        logging.debug(context)
         return context
 
     def get_projects_list(self, user):
         try:
             projects_list = list()
             projects = get_objects_for_user(user, self.project_required_permissions, any_perm=True)
-            # logging.debug(projects)
             for project in projects:
                 topics = Topic.objects.filter(project=project)
-                projects_entry = {
+                _client = mqtt_client_manager.get_client(project.pk)
+                if _client:
+                    connected = _client.connected
+                else:
+                    connected = False
+
+                project_params = {
                     "project": project,
+                    "connected": connected
+                }
+                projects_entry = {
+                    "project_params": project_params,
                     "topics": topics
                 }
                 projects_list.append(projects_entry)
@@ -148,7 +158,6 @@ class NewProjectView(View):
             return HttpResponse(status=403)
 
         form = self.form_class(request.POST)
-        project = None
         if form.is_valid():
             project = Project(
                 name=form.cleaned_data["name"],
@@ -357,12 +366,22 @@ class DeleteProjectView(DeleteViewBase):
         user = get_user(request)
         project_list = list()
         for _project in get_objects_for_user(user, self.required_permissions, any_perm=True):
-            _topics = Topic.objects.filter(project=_project)
-            project_info = {
+            topics = Topic.objects.filter(project=_project)
+            _client = mqtt_client_manager.get_client(_project.pk)
+            if _client:
+                connected = _client.connected
+            else:
+                connected = False
+
+            project_params = {
                 "project": _project,
-                "topics": _topics,
+                "connected": connected
             }
-            project_list.append(project_info)
+            projects_entry = {
+                "project_params": project_params,
+                "topics": topics
+            }
+            project_list.append(projects_entry)
 
         context = {
             "project_list": project_list,
@@ -649,14 +668,23 @@ class RefreshConnectionsView(View):
                     port=project.port
                 )
         self.send_mqtt_consumer_refresh()
-        projects = Project.objects.all()[:10]
         project_list = list()
-        for project in projects:
+        for project in projects[:10]:
             topics = Topic.objects.filter(project=project)
-            project_info = {
+            _client = mqtt_client_manager.get_client(project.pk)
+            if _client:
+                connected = _client.connected
+            else:
+                connected = False
+
+            project_params = {
                 "project": project,
-                "topics": topics,
+                "connected": connected
             }
-            project_list.append(project_info)
+            projects_entry = {
+                "project_params": project_params,
+                "topics": topics
+            }
+            project_list.append(projects_entry)
 
         return render(request, self.template_name, {"project_list": project_list})
