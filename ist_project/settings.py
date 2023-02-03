@@ -25,22 +25,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("SECRET_KEY", default="2f3d839abb63be78dfd3eec06e67805f5a2cc44c63c941cc510217091985c463")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = "RENDER" not in os.environ
+DEBUG = "RAILWAY_ENVIRONMENT" not in os.environ
 
 if not DEBUG:
     ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 else:
     ALLOWED_HOSTS = []
 
-RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
-if RENDER_EXTERNAL_HOSTNAME:
-    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+RAILWAY_EXTERNAL_HOSTNAME = os.environ.get('RAILWAY_STATIC_URL')
+if RAILWAY_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RAILWAY_EXTERNAL_HOSTNAME)
 # Application definition
 
 INSTALLED_APPS = [
     'authentication',
     'dashboard',
-    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -87,16 +86,16 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'ist_project.wsgi.application'
 ASGI_APPLICATION = 'ist_project.asgi.application'
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [("red-cfcg79hgp3jokp1dtvrg", 6379)] if (not DEBUG) else [("localhost", 6379)],
-        },
-    },
-}
+# CHANNEL_LAYERS = {
+#     "default": {
+#         "BACKEND": "channels_redis.core.RedisChannelLayer",
+#         "CONFIG": {
+#             "hosts": [("red-cfcg79hgp3jokp1dtvrg", 6379)] if (not DEBUG) else [("localhost", 6379)],
+#         },
+#     },
+# }
 
-CSRF_TRUSTED_ORIGINS = ["https://" + str(RENDER_EXTERNAL_HOSTNAME), "http://" + str(RENDER_EXTERNAL_HOSTNAME)]
+CSRF_TRUSTED_ORIGINS = ["https://" + str(RAILWAY_EXTERNAL_HOSTNAME), "http://" + str(RAILWAY_EXTERNAL_HOSTNAME)]
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
@@ -110,7 +109,7 @@ if DEBUG:
 else:
     DATABASES = {
         'default': dj_database_url.config(
-            default=os.environ["DATABASE_URL"],
+            default=os.environ["MYSQL_URL"],
             conn_max_age=600
         )
     }
@@ -119,7 +118,7 @@ if DEBUG:
     MONGODB_CONNECTION_URI = \
     "mongodb://localhost:27017"
 else:
-    MONGODB_CONNECTION_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
+    MONGODB_CONNECTION_URI = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
 
 
 # Password validation
