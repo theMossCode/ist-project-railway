@@ -1,3 +1,4 @@
+.vscode/
 .idea/
 poetry.lock
 dashboard/__pycache__/
