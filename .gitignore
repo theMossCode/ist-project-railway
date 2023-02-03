@@ -1,3 +1,6 @@
 .idea/
 poetry.lock
 dashboard/__pycache__/
+dashboard/mqtt/__pycache__
+dashboard/mongodb/__pycache__
+*.sqlite3
