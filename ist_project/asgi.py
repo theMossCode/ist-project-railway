@@ -15,15 +15,8 @@ from django.core.asgi import get_asgi_application
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ist_project.settings')
 django.setup()
 
-from channels.routing import ChannelNameRouter, ProtocolTypeRouter
+# from channels.routing import ChannelNameRouter, ProtocolTypeRouter
 
-application = ProtocolTypeRouter(
-    {
-        # "channel": ChannelNameRouter({
-        #     "mqtt": MQTTConsumer.as_asgi()
-        # }),
-        "http": get_asgi_application()
-    }
-)
+application = get_asgi_application()
 
 

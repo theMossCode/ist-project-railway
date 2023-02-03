@@ -15,7 +15,7 @@ from django.utils.decorators import method_decorator
 from guardian.shortcuts import assign_perm, get_perms, get_objects_for_user
 
 from asgiref.sync import async_to_sync, sync_to_async
-from channels.layers import get_channel_layer
+# from channels.layers import get_channel_layer
 
 from .forms import NewProjectForm, NewTopicForm, NewDataObjectForm
 from .models import Project, Topic, DataObject
@@ -28,7 +28,7 @@ from django.views.generic import TemplateView
 from django.views import View
 
 
-channel_layer = get_channel_layer()
+# channel_layer = get_channel_layer()
 detail_decorators = [login_required(login_url="authentication:login")]
 
 
