@@ -38,9 +38,10 @@ if RAILWAY_EXTERNAL_HOSTNAME:
 # Application definition
 
 INSTALLED_APPS = [
-    'daphne',
+    # 'daphne',
     'authentication',
     'dashboard',
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

@@ -6,7 +6,7 @@
             <div class="uk-flex-column">
                 <span class="uk-card-title">{{ project_info.project_params.project.name }}</span>
                 <span class="uk-h6">({{ project_info.project_params.project.host }})</span>
-                <div class="uk-flex-row">
+                <div class="uk-flex-row" id="connection-status-div" hx-get="{% url 'dashboard:check_connection' project_info.project_params.project.id %}" hx-trigger="every 2s">
                     {% if project_info.project_params.connected %}
                     <div class="uk-inline" id="connected-indicator">
                         <span class="uk-label uk-label-success">Connected</span>

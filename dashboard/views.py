@@ -641,7 +641,7 @@ class DownloadView(ViewsMixin, View):
     def get(self, request, *args, **kwargs):
         dataobject = self.get_data_object(kwargs["dataobject_id"])
         topic = self.get_topic(dataobject.topic.pk)
-        project = self.get_project(pk=topic.project.pk)
+        project = self.get_project(topic.project.pk)
         entries_num = 500
 
         aggregation = [
@@ -715,3 +715,24 @@ class RefreshConnectionsView(ViewsMixin, View):
         self.clear_context()
         self.add_context_data("project_list", self.get_projects_param_list())
         return self.render_template(request)
+
+
+class CheckConnectionView(View):
+    connected_template = "dashboard/partials/ajax/project_connected.html"
+    disconnected_template = "dashboard/partials/ajax/project_disconnected.html"
+
+    def get(self, request, *args, **kwargs):
+        try:
+            project_id = kwargs["project_id"]
+        except KeyError:
+            logging.error("Key error")
+            return HttpResponse(status=404)
+
+        mqtt_client = mqtt_client_manager.get_client(int(project_id))
+        if not mqtt_client:
+            return HttpResponse(status=500)
+
+        if mqtt_client.connected:
+            return render(request, self.connected_template)
+        else:
+            return render(request, self.disconnected_template)

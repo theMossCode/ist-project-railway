@@ -1,10 +1,11 @@
 <div>
     <div class="uk-container uk-container-large">
         <div class="uk-grid">
-            <div class="uk-container uk-container-expand uk-width-1-1@s">
+            <div class="uk-container uk-container-small uk-width-1-1@s">
                 {{ bokeh_div|safe }}
+                {{ bokeh_script|safe }}
             </div>
-            <div class="uk-container uk-container-expand uk-width-1-1@s uk-overflow-auto uk-height-small">
+            <div class="uk-container uk-container-expand uk-width-1-1@s uk-overflow-auto uk-height-medium">
                 <table class="uk-table uk-table-small">
                     <thead>
                         <th>Name</th>
@@ -27,6 +28,5 @@
                 </table>
             </div>
         </div>
-        {{ bokeh_script|safe }}
     </div>
 </div>

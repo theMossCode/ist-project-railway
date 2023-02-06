@@ -1,14 +1,18 @@
 {% extends "../base.html" %}
+{% load static %}
 {% block topmenublock %}
 <div class="uk-card uk-card-body uk-padding-remove uk-background-muted uk-position-z-index" uk-sticky="end: false; offset:84">
     <ul class="uk-breadcrumb">
         <li><a href="{% url 'dashboard:index' %}" class="uk-text-bold">Projects</a></li>
         <li><a href="{% url 'dashboard:detail_project' project.id %}" class="uk-text-bold">{{ project.host }}</a></li>
     </ul>
-    <button class="uk-button uk-button-default uk-button-small uk-position-top-right" hx-get="{% url 'dashboard:new_topic' project.id %}" hx-target="#new-topic-dialog" hx-swap="innerHTML">
+    <div class="uk-inline uk-position-center-right">
+        <img id="new-indicator" class="htmx-indicator" src="{% static 'svg-loaders/tail-spin.svg' %}" width="28">
+        <button class="uk-button uk-button-default uk-button-small" hx-get="{% url 'dashboard:new_topic' project.id %}" hx-target="#new-topic-dialog" hx-swap="innerHTML" hx-indicator="#new-indicator">
         <span uk-icon="icon: plus-circle"></span>
         New Topic
-    </button>
+        </button>
+    </div>
 </div>
 {% endblock topmenublock %}
 {% block maincontentblock %}

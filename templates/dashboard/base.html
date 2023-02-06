@@ -16,6 +16,9 @@
     <!-- <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"/> -->
 
     <title> {% block title_block %}{% endblock title_block %} </title>
+    {% block bokeh_scripts %}
+        
+    {% endblock bokeh_scripts %}
     <!-- Bokeh -->
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-3.0.3.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.0.3.min.js" crossorigin="anonymous"></script>

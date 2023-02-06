@@ -29,8 +29,8 @@ class BokehPlot(GaugeMixin):
             hourmin="%H:%M",
             minsec="%M:%S",
             minutes="%H:%M",
-            context=str(self.data_source["x_values"][-1].strftime("%d/%m/%y %I:%M %p")),
-            context_which="start"
+            # context=str(self.data_source["x_values"][-1].strftime("%d/%m/%y %I:%M %p")),
+            # context_which="start"
         )
 
     def create_figure(self, title=None, x_label=None, y_label=None, x_axis_type="linear", y_axis_type="linear"):

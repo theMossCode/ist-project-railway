@@ -1,4 +1,13 @@
 {% extends "../base.html" %}
+{% load static %}
+{% block bokeh_scripts %}
+      <!-- Bokeh -->
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-3.0.3.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.0.3.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-3.0.3.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-gl-3.0.3.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-mathjax-3.0.3.min.js" crossorigin="anonymous"></script>      
+{% endblock bokeh_scripts %}
 {% block topmenublock %}
 <div class="uk-card uk-card-body uk-padding-remove uk-background-muted uk-position-z-index" uk-sticky="end: false; offset:80">
     <ul class="uk-breadcrumb">
@@ -6,10 +15,13 @@
         <li><a href="{% url 'dashboard:detail_project' topic.project.id %}" class="uk-text-bold">{{ topic.project.host }}</a></li>
         <li><a href="{% url 'dashboard:detail_topic' topic.id %}" class="uk-text-bold">{{ topic.name }}</a></li>
     </ul>
-    <button class="uk-button uk-button-default uk-button-small uk-position-center-right" hx-get="{% url 'dashboard:new_dataobject' topic.id %}" hx-target="#new-dataobject-dialog" hx-swap="innerHTML">
-        <span uk-icon="icon: plus-circle"></span>
-        New Data Field
-    </button>
+    <div class="uk-inline uk-position-center-right">
+        <img id="new-indicator" class="htmx-indicator" src="{% static 'svg-loaders/tail-spin.svg' %}" width="28">
+        <button class="uk-button uk-button-default uk-button-small" hx-get="{% url 'dashboard:new_dataobject' topic.id %}" hx-target="#new-dataobject-dialog" hx-swap="innerHTML" hx-indicator="#new-indicator">
+            <span uk-icon="icon: plus-circle"></span>
+            New Data Field
+        </button>
+    </div>
 </div>
 {% endblock topmenublock %}
 {% block maincontentblock %}

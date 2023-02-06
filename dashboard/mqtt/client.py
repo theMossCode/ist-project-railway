@@ -15,21 +15,21 @@ from channels.layers import get_channel_layer
 channel_layer = get_channel_layer()
 
 class MessageParserMixin:
-    def get_topic_info_from_message(self, message, project):
+    def get_topic_info_from_message(self, topic_path, project):
         topics = Topic.objects.filter(project=project)
         topic_info_list = list()
         for topic in topics:
             if "#" in topic.path:
                 i = topic.path.index("#")
-                obj_path = message.topic[i:]
-                if str(message.topic).startswith(topic.path[:-1]):
+                obj_path = topic_path[i:]
+                if str(topic_path).startswith(str(topic.path[:(i-1)])):
                     topic_info = {
                         "obj_path": obj_path,
                         "topic": topic
                     }
                     topic_info_list.append(topic_info)
 
-            elif message.topic == topic.path:
+            elif str(topic_path).startswith(str(topic.path)):
                 topic_info = {
                     "topic": topic,
                 }
@@ -39,52 +39,53 @@ class MessageParserMixin:
 
     def create_mongodb_data_object(self, topic, raw_data, obj_path=None):
         try:
+            logging.debug(f"Raw data {raw_data}")
             processed_data = json.loads(raw_data)
+            logging.debug(f"Json data {processed_data}")
         except json.JSONDecodeError:
             processed_data = raw_data.decode()
+            logging.debug(f"Decoded data {processed_data}")
 
         data_objects = DataObject.objects.filter(topic=topic)
         mongodb_data_obj = dict()
         for data_object in data_objects:
             value = self.get_dataobject_value_from_data(data_object, processed_data)
-            if not obj_path:
+            if obj_path is None:
                 if value:
                     mongodb_data_obj[f"{data_object.pk}"] = value
             else:
-                if data_object.path != obj_path:
-                    continue
-
-                if value:
-                    mongodb_data_obj[f"{data_object.pk}"] = value
+                if data_object.path == obj_path:
+                    if value:
+                        mongodb_data_obj[f"{data_object.pk}"] = value
 
         return mongodb_data_obj
 
-
-    def get_dataobject_value_from_data(self, data_object, data):
-        if data_object.format == data_object.FORMAT_CHOICE_JSON:
-            try:
-                value = data[f"{data_object.key}"]
-            except KeyError:
-                logging.debug(f"Key error {data_object.key} not in {data}")
+    def get_dataobject_value_from_data(self, data_object, processed_data):
+        if data_object.format == DataObject.FORMAT_CHOICE_JSON:
+            if not isinstance(processed_data, dict):
                 return None
-        elif data_object.format == data_object.FORMAT_CHOICE_SINGLE_VARIABLE:
-            value = data
 
-        if value:
-            if data_object.data_type == data_object.DATA_TYPE_NUMBER:
+            obj_value = processed_data.get(f"{data_object.key}", None)
+        elif data_object.format == DataObject.FORMAT_CHOICE_SINGLE_VARIABLE:
+            obj_value = processed_data
+        else:
+            obj_value = None
+
+        if obj_value is not None:
+            if data_object.data_type == DataObject.DATA_TYPE_NUMBER:
                 try:
-                    value = float(value)
-                    return value
+                    ret = float(obj_value)
+                    return ret
                 except TypeError:
-                    logging.debug(f"{value} not a number")
-            elif data_object.data_type == data_object.DATA_TYPE_STRING:
-                return str(value)
-            elif data_object.data_type == data_object.DATA_TYPE_LOCATION:
+                    logging.debug(f"{obj_value} not a number")
+            elif data_object.data_type == DataObject.DATA_TYPE_STRING:
+                return str(obj_value)
+            elif data_object.data_type == DataObject.DATA_TYPE_LOCATION:
                 #TODO location object
                 pass
-            elif data_object.data_type == data_object.DATA_TYPE_BOOLEAN:
-                if isinstance(value, bool):
-                    return value
+            elif data_object.data_type == DataObject.DATA_TYPE_BOOLEAN:
+                if isinstance(obj_value, bool):
+                    return obj_value
 
         return None
 
@@ -108,7 +109,7 @@ class MQTTClient(MessageParserMixin, client.Client):
         self.on_publish = self._published
 
         # DB save thread pool
-        self.msg_rec_threadpool = concurrent.futures.ThreadPoolExecutor()
+        self.msg_rec_threadpool = concurrent.futures.ThreadPoolExecutor(1)
 
     async def connect_broker(self):
         """
@@ -198,9 +199,10 @@ class MQTTClient(MessageParserMixin, client.Client):
 
     # Message received callback
     def _message_received(self, client_ptr, userdata, message):
-        fut = self.msg_rec_threadpool.submit(self.__process_message, message)
+        logging.debug(f"msg received on {message.topic}")
+        self.msg_rec_threadpool.submit(self.__process_message, message.topic, message.payload)
 
-    def __process_message(self, message):
+    def __process_message(self, topic_path, payload):
         now = datetime.datetime.utcnow()
         try:
             project = Project.objects.get(pk=self.id)
@@ -208,28 +210,18 @@ class MQTTClient(MessageParserMixin, client.Client):
             logging.debug("Project not found")
             return
 
-        topics_info = self.get_topic_info_from_message(message, project)
+        topics_info = self.get_topic_info_from_message(topic_path, project)
         for topic_info in topics_info:
             try:
                 topic = topic_info["topic"]
-            except KeyError:
-                logging.debug("Key error!")
+            except Exception as e:
+                logging.debug(e)
                 continue
 
             obj_path = topic_info.get("obj_path", None)
-            mongodb_obj = self.create_mongodb_data_object(topic, message.payload, obj_path)
+            mongodb_obj = self.create_mongodb_data_object(topic, payload, obj_path)
             if mongodb_obj:
                 db_utils.add_data_obj(project, topic, {"time": now, "values": mongodb_obj})
-
-    def __process_message_loop(self):
-        logging.debug("message thread")
-        try:
-            while 1:
-                for fut in self.msg_parse_futures:
-                    res = async_to_sync(fut.result())
-                    self.msg_parse_futures.remove(fut)
-        except KeyboardInterrupt:
-            return
 
     # Topic subscribed callback
     def _subscribed(self, client_ptr, userdata, mid, granted_qos):
@@ -252,7 +244,6 @@ class MQTTClientManager:
 
     def get_client(self, client_id):
         for temp_client in self.client_list:
-            # logging.debug(temp_client.id)
             if temp_client.id == client_id:
                 return temp_client
 

@@ -31,6 +31,7 @@ ajax_urls = [
     path("htmx_ajax/topic/mongo_dataobject/<slug:topic_id>", views.QueryDataObjectsView.as_view(), name="query_dataobjects"),
     path("htmx_ajax/mongo_dataobject/values/<slug:dataobject_id>/", views.QueryDataObjectValues.as_view(), name="query_dataobject_values"),
     path("html_ajax/connection/refresh", views.RefreshConnectionsView.as_view(), name="refresh_connections"),
+    path("html_ajax/connection/check/<slug:project_id>", views.CheckConnectionView.as_view(), name="check_connection"),
 ]
 
 download_urls = [

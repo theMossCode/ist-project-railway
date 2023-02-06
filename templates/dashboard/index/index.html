@@ -9,7 +9,7 @@
         <img id="new-indicator" class="htmx-indicator" src="{% static 'svg-loaders/tail-spin.svg' %}" width="28">
         <div id="refresh-connections-btn-div" class="uk-inline">
             {% url 'dashboard:refresh_connections'  as refresh_url%}
-            <button id="refresh-connections-btn" class="uk-button uk-button-default uk-button-small" onclick="refreshConnectionsOnPress('{{ refresh_url }}')">
+            <button id="refresh-connections-btn" class="uk-button uk-button-default uk-button-small" hx-get="{{ refresh_url }}" hx-target="#div-main-grid" hx-indicator="#new-indicator">
                 <span uk-icon="icon: refresh"></span>
                 Refresh Connections
             </button>
