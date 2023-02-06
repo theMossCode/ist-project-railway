@@ -1,1 +1,1 @@
-web: python manage.py makemigrations && python manage.py migrate && python manage.py collectstatic && gunicorn ist_project.wsgi
+web: python3 manage.py makemigrations && python3 manage.py migrate && python3 manage.py collectstatic && daphne ist_project.asgi:application
