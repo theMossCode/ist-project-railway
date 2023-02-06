@@ -38,6 +38,7 @@ if RAILWAY_EXTERNAL_HOSTNAME:
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'authentication',
     'dashboard',
     'django.contrib.admin',
@@ -86,14 +87,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'ist_project.wsgi.application'
 ASGI_APPLICATION = 'ist_project.asgi.application'
-# CHANNEL_LAYERS = {
-#     "default": {
-#         "BACKEND": "channels_redis.core.RedisChannelLayer",
-#         "CONFIG": {
-#             "hosts": [("red-cfcg79hgp3jokp1dtvrg", 6379)] if (not DEBUG) else [("localhost", 6379)],
-#         },
-#     },
-# }
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [(os.environ["REDIS_URI"], 6379)] if (not DEBUG) else [("localhost", 6379)],
+        },
+    },
+}
 
 CSRF_TRUSTED_ORIGINS = ["https://" + str(RAILWAY_EXTERNAL_HOSTNAME), "http://" + str(RAILWAY_EXTERNAL_HOSTNAME)]
 # Database

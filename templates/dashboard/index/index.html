@@ -6,15 +6,20 @@
         <li><a href="{% url 'dashboard:index' %}" class="uk-text-bold">Projects</a></li>
     </ul>
     <div class="uk-container-small uk-position-center-right">
-        <button class="uk-button uk-button-default uk-button-small" hx-get="{% url 'dashboard:refresh_connections' %}" hx-target="#div-main-grid" hx-swap="innerHTML" hx-indicator="#new-indicator">
-            <span uk-icon="icon: refresh"></span>
-            Refresh Connections
-        </button>
-        <button class="uk-button uk-button-default uk-button-small" hx-get="{% url 'dashboard:new_project' %}" hx-target="#new-project-dialog" hx-swap="innerHTML" hx-indicator="#new-indicator">
-            <span uk-icon="icon: plus-circle"></span>
-            New Project
-        </button>
-        <img id="new-indicator" class="htmx-indicator" src="{% static 'svg-loaders/tail-spin.svg' %}" width="50">
+        <img id="new-indicator" class="htmx-indicator" src="{% static 'svg-loaders/tail-spin.svg' %}" width="28">
+        <div id="refresh-connections-btn-div" class="uk-inline">
+            {% url 'dashboard:refresh_connections'  as refresh_url%}
+            <button id="refresh-connections-btn" class="uk-button uk-button-default uk-button-small" onclick="refreshConnectionsOnPress('{{ refresh_url }}')">
+                <span uk-icon="icon: refresh"></span>
+                Refresh Connections
+            </button>
+        </div>
+        <div id="new-project-btn-div" class="uk-inline">
+            <button class="uk-button uk-button-default uk-button-small" hx-get="{% url 'dashboard:new_project' %}" hx-target="#new-project-dialog" hx-swap="innerHTML" hx-indicator="#new-indicator">
+                <span uk-icon="icon: plus-circle"></span>
+                New Project
+            </button>
+        </div>
     </div>
 </div>
 {% endblock topmenublock %}

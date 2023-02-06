@@ -1,73 +1,84 @@
-    <form hx-post="{{ post_url }}">
-        {% csrf_token %}
-        <fieldset class=" uk-fieldset">
-            <div class="uk-modal-header">
-                <legend class="uk-legend">{{ form_legend }}</legend>
+<form hx-post="{{ post_url }}">
+    {% csrf_token %}
+    <fieldset class=" uk-fieldset">
+        <div class="uk-modal-header">
+            <legend class="uk-legend">{{ form_legend }}</legend>
+        </div>
+        <div class="uk-modal-body" uk-overflow-auto>
+            {% if form.non_field_errors %}
+            <div class="uk-margin uk-text-danger">
+                {{ form.non_field_errors }}
             </div>
-            <div class="uk-modal-body" uk-overflow-auto>
-                {% if form.non_field_errors %}
-                <div class="uk-margin uk-text-danger">
-                    {{ form.non_field_errors }}
+            {% endif %}
+            <div class="uk-margin">
+                {% if form.name.errors %}
+                <div class="uk-text-danger">
+                    {{ form.name.errors }}
                 </div>
                 {% endif %}
-                <div class="uk-margin">
-                    {% if form.name.errors %}
-                    <div class="uk-text-danger">
-                        {{ form.name.errors }}
-                    </div>
-                    {% endif %}
-                    <label for="name">Name</label>
-                    <input type="text" name="name" id="name" class="uk-input" value="{{ form.data.name }}">
+                <label for="name">Name</label>
+                <input type="text" name="name" id="name" class="uk-input" value="{{ form.data.name }}">
+            </div>
+            <div class="uk-margin">
+                {% if form.desc.errors %}
+                <div class="uk-text-danger">
+                    {{ form.desc.errors }}
                 </div>
-                <div class="uk-margin">
-                    {% if form.desc.errors %}
-                    <div class="uk-text-danger">
-                        {{ form.desc.errors }}
-                    </div>
-                    {% endif %}
-                    <label for="desc">Description</label>
-                    <textarea class="uk-textarea" name="desc" id="desc">{{ form.data.desc }}</textarea>
-                </div>
-                <hr>
-                <div class="uk-margin">
-                    <div class="uk-child-width-1-2@s" uk-grid>
-                        <label>
-                            Format
-                            <select class="uk-select" name="format">
-                                {% for id,choice in format_choices %}
-                                    <option value="{{ id }}" {% if dataobject.format|slugify == id|slugify %}selected{% endif %}>{{ choice }}</option>
-                                {% endfor %}
-                            </select>
-                        </label>
-                        <label>
-                            Data Type
-                            <select class="uk-select" name="data_type">
-                                {% for id, choice in data_types %}
-                                    <option value="{{ id }}" {% if dataobject.data_type|slugify == id|slugify %}selected{% endif %}>{{ choice }}</option>
-                                {% endfor %}
-                            </select>
-                        </label>
-                    </div>
-                </div>
-                <hr>
-                <div class="uk-margin">
+                {% endif %}
+                <label for="desc">Description</label>
+                <textarea class="uk-textarea" name="desc" id="desc">{{ form.data.desc }}</textarea>
+            </div>
+            <hr>
+            <div class="uk-margin">
+                <div class="uk-child-width-1-2@s" uk-grid>
                     <label>
-                        Topic
-                        <input class="uk-input" type="text" name="topic" value="{{ topic.path }}" disabled>
+                        Format
+                        <select class="uk-select" name="format">
+                            {% for id,choice in format_choices %}
+                            <option value="{{ id }}" {% if dataobject.format|slugify == id|slugify %}selected{% endif %}>{{ choice }}</option>
+                            {% endfor %}
+                        </select>
                     </label>
                     <label>
-                        Path
-                        <input class="uk-input" type="text" name="path" value="{{ form.data.path }}">
-                    </label>
-                    <label>
-                        Key
-                        <input class="uk-input" type="text" name="key" value="{{ form.data.key }}">
+                        Data Type
+                        <select class="uk-select" name="data_type">
+                            {% for id, choice in data_types %}
+                            <option value="{{ id }}" {% if dataobject.data_type|slugify == id|slugify %}selected{% endif %}>{{ choice }}</option>
+                            {% endfor %}
+                        </select>
                     </label>
                 </div>
             </div>
-            <div class="uk-modal-footer">
-                <button type="submit" class="uk-button uk-button-primary">Submit</button>
-                <button type="button" class="uk-button" onclick="hideModal('{{ dialog_id }}')">Cancel</button>
+            <hr>
+            <div class="uk-margin">
+                <label>
+                    Topic
+                    <input class="uk-input" type="text" name="topic" value="{{ topic.path }}" disabled>
+                </label>
+                <label>
+                    Path
+                    <input class="uk-input" type="text" name="path" value="{{ form.data.path }}">
+                </label>
+                <label>
+                    Key
+                    <input class="uk-input" type="text" name="key" value="{{ form.data.key }}">
+                </label>
             </div>
-        </fieldset>
-    </form>
+            <div class="uk-margin">
+                <label>
+                Widget Type
+                <select class="uk-select" name="widget_type">
+                    {% for id, choice in widget_types %}
+                    <option value="{{ id }}" {% if dataobject.widget_type|slugify == id|slugify %}selected{% endif %}>{{ choice }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            </div>
+        </div>
+        <hr>
+        <div class="uk-modal-footer">
+            <button type="submit" class="uk-button uk-button-primary">Submit</button>
+            <button type="button" class="uk-button" onclick="hideModal('{{ dialog_id }}')">Cancel</button>
+        </div>
+    </fieldset>
+</form>

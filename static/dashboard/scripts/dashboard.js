@@ -22,7 +22,29 @@ function hideModal(modal_id) {
     }, 200);
 }
 
+function refreshConnectionsOnPress(url){
+    fetch(url)
+    .then(response=>{
+        if(response.ok){
+            showNotification("Connection refresh started...");
+        }
+        else{
+            showNotification("Request error");
+        }
+    })
+    .catch(error => {
+        showNotification("Unkown error");
+        console.log(error);
+    })
+}
+
+function showNotification(notification_msg){
+    UIkit.notification(notification_msg);
+}
+
 function afterSwapEvtListener(e) {
+    let src_elem_id = e.detail.requestConfig.elt.id;
+    console.log(src_elem_id)
     if (e.detail.xhr.status != 201) {
     	console.log("Swapped " + e.detail.target.id);
         switch (e.detail.target.id) {
@@ -34,23 +56,25 @@ function afterSwapEvtListener(e) {
                 return;
             case "new-dataobject-dialog":
             	showModal("new-dataobject-dialog");
-            	break;
+            	return;
             case "edit-dataobject-dialog":
             	showModal("edit-dataobject-dialog");
-            	break;
+            	return;
             default:
-                return;
+                break;
         }
     }
-    // else if(e.detail.xhr.status == 201){
-    // 	// Reload window
-    // 	window.location.reload();
-    // }
+
+    if (src_elem_id == "refresh-connections-btn"){
+        console.log("Found id")
+        showNotification("Connection refresh started...")
+    }
 }
 
 function beforeSwapEvtListener(e) {
     // If request was successful, fill #div-projects with resp data
-    if (e.detail.xhr.status == 201) {
+    let resp_status = e.detail.xhr.status;
+    if (resp_status == 201) {
         console.log("created " + e.detail.elt.id + " " + e.detail.xhr.response);
         switch (e.detail.elt.id) {
             case "new-project-dialog":
@@ -73,6 +97,9 @@ function beforeSwapEvtListener(e) {
                 // statements_def
                 break;
         }
+    }
+    else if(resp_status == 500){
+        showNotification("Internal server error");
     }
 }
 

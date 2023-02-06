@@ -24,37 +24,22 @@ def get_document(collection, topic):
         {"$match": {"topic": "{}".format(topic.id)}},
     ]
 
-    try:
-        doc = collection.aggregate(aggregation)
-        return doc
-    except Exception as e:
-        logging.debug(e)
-        return None
+    doc = collection.aggregate(aggregation)
+    return doc
 
 
-async def add_data_obj(project, topic, data):
+def add_data_obj(project, topic, data):
     logging.debug("Add data object")
-
     db = get_database(project.db_name)
     project_col = db[get_project_collection_name(project)]
-    values_obj = dict()
-    for key, value in data["values"].items():
-        values_obj[f"{key}"] = value
-
     data_object = {
         "timestamp": data["time"].timestamp(),
-        "value": values_obj,
+        "value": data["values"],
     }
-
     doc_filters = {
         "topic": topic.pk,
         "date": data["time"].toordinal()
     }
-    # data_query = {
-    #     "$push": {
-    #         "values": data_object,
-    #     },
-    # }
     data_query = {
         "$push": {
             "values": data_object,
@@ -80,7 +65,6 @@ def get_data_objects(project, topic, limit=100):
         "topic": topic.pk,
         "date": datetime.datetime.utcnow().toordinal(),
     }
-
     aggregation = [
         {"$match": {
             "$and": [{"topic": topic.pk}, {"date": datetime.datetime.utcnow().toordinal()}]
@@ -90,34 +74,24 @@ def get_data_objects(project, topic, limit=100):
     ]
 
     # Sort array
-    sort_res = project_col.update_one(doc_filter,
-                                      {"$push": {"values": {
-                                           "$each": [],
-                                           "$sort": {"timestamp": pymongo.DESCENDING}
-                                       }}})
+    project_col.update_one(doc_filter,
+                           {"$push": {"values": {
+                               "$each": [],
+                               "$sort": {"timestamp": pymongo.DESCENDING}
+                           }}})
 
-    logging.debug(f"Sort res {sort_res.acknowledged}")
-    try:
-        cursor = get_data_objects_by_aggregation(project, aggregation)
-        logging.debug(cursor)
-        for _obj in cursor:
-            values_array = _obj["values"]
-            return values_array
-    except Exception as e:
-        logging.exception(e)
-        return None
+    cursor = get_data_objects_by_aggregation(project, aggregation)
+    for c_obj in cursor:
+        values_array = c_obj.get("values", [])
+        # excpecting only one
+        return values_array
 
 
 def get_data_objects_by_aggregation(project, aggregation):
     db = get_database(project.db_name)
     project_col = db[get_project_collection_name(project)]
-
-    try:
-        res = project_col.aggregate(aggregation)
-        return res
-    except Exception as e:
-        logging.error(f"Exception occured : {e}")
-        return None
+    res = project_col.aggregate(aggregation)
+    return res
 
 
 def delete_project_collection(project):

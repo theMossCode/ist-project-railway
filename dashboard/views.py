@@ -5,6 +5,7 @@ import logging
 import datetime
 import time
 
+import django.db.models
 import pymongo
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse, StreamingHttpResponse
@@ -20,7 +21,7 @@ from asgiref.sync import async_to_sync, sync_to_async
 from .forms import NewProjectForm, NewTopicForm, NewDataObjectForm
 from .models import Project, Topic, DataObject
 from .mongodb import get_db_name, db_utils
-from .bokeh_utils import Plot
+from .bokeh_utils import BokehPlot
 from .mqtt import mqtt_client_manager
 from . import utils
 
@@ -32,97 +33,162 @@ from django.views import View
 detail_decorators = [login_required(login_url="authentication:login")]
 
 
-@method_decorator(detail_decorators, name="dispatch")
-class IndexView(TemplateView):
-    template_name = "dashboard/index/index.html"
-    project_required_permissions = [
-        "dashboard.is_owner",
-        "dashboard.can_view",
-        "dashboard.can_delete",
-    ]
+class ViewsMixin:
+    required_permissions = None
+    user = None
+    context = dict()
+    template_name = None
+    form_class = None
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        user = get_user(self.request)
-        context["user"] = user
-        context["project_list"] = self.get_projects_list(user)
-        logging.debug(context)
-        return context
+    def set_template_name(self, t_name):
+        self.template_name = t_name
 
-    def get_projects_list(self, user):
+    def set_required_permissions(self, permissions_list):
+        self.required_permissions = permissions_list
+
+    def set_form_class(self, f_class):
+        self.form_class = f_class
+
+    def clear_context(self):
+        self.context.clear()
+
+    def add_context_data(self, key, value):
+        self.context[str(key)] = value
+
+    def get_topics_for_project(self, project):
+        topics = Topic.objects.filter(project=project)
+        return topics
+
+    def get_dataobjects_for_topic(self, topic):
+        data_objects = DataObject.objects.filter(topic=topic)
+        return data_objects
+
+    def get_project(self, project_id):
         try:
-            projects_list = list()
-            projects = get_objects_for_user(user, self.project_required_permissions, any_perm=True)
-            for project in projects:
-                topics = Topic.objects.filter(project=project)
-                _client = mqtt_client_manager.get_client(project.pk)
-                if _client:
-                    connected = _client.connected
-                else:
-                    connected = False
-
-                project_params = {
-                    "project": project,
-                    "connected": connected
-                }
-                projects_entry = {
-                    "project_params": project_params,
-                    "topics": topics
-                }
-                projects_list.append(projects_entry)
-
-            return projects_list
-        except Exception as e:
-            logging.debug(e)
-            return list()
-
-
-@method_decorator(detail_decorators, name="dispatch")
-class DetailProjectView(TemplateView):
-    template_name = "dashboard/detail/project.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data()
-        try:
-            context["project"] = Project.objects.get(pk=kwargs["project_id"])
-            context["topics"] = Topic.objects.filter(project=context["project"])
-            return context
-        except Exception as e:
-            return dict()
-
-
-@method_decorator(detail_decorators, name="dispatch")
-class DetailTopicView(TemplateView):
-    template_name = "dashboard/detail/topic.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        try:
-            context["topic"] = Topic.objects.get(pk=kwargs["topic_id"])
-            context["data_objects"] = DataObject.objects.filter(topic=context["topic"])
-            # logging.debug(context)
-            return context
-        except Exception as e:
-            logging.debug(e)
+            project = Project.objects.get(pk=project_id)
+            return project
+        except django.db.models.ObjectDoesNotExist:
             return None
 
+    def get_topic(self, topic_id):
+        try:
+            topic = Topic.objects.get(pk=topic_id)
+            return topic
+        except django.db.models.ObjectDoesNotExist:
+            return None
+
+    def get_data_object(self, dataobject_id):
+        try:
+            data_object = DataObject.objects.get(pk=dataobject_id)
+            return data_object
+        except django.db.models.ObjectDoesNotExist:
+            return None
+
+    def get_projects(self):
+        if not self.user:
+            return None
+        try:
+            projects = get_objects_for_user(self.user, self.required_permissions, any_perm=True)
+            return projects
+        except django.db.models.ObjectDoesNotExist:
+            return None
+
+    def get_projects_param_list(self):
+        projects = self.get_projects()
+        projects_param_list = list()
+        for project in projects:
+            topics = self.get_topics_for_project(project)
+            mqtt_client = mqtt_client_manager.get_client(project.pk)
+            if mqtt_client:
+                connected = mqtt_client.connected
+            else:
+                connected = False
+
+            project_params = {
+                "project": project,
+                "connected": connected
+            }
+            projects_entry = {
+                "project_params": project_params,
+                "topics": topics
+            }
+
+            projects_param_list.append(projects_entry)
+
+        return projects_param_list
+
+    def render_template(self, request):
+        return render(request, self.template_name, self.context)
+
 
 @method_decorator(detail_decorators, name="dispatch")
-class DetailDataObjectView(TemplateView):
-    template_name = "dashboard/detail/dataobject.html"
+class IndexView(ViewsMixin, TemplateView):
+    def __init__(self):
+        # super().__init__()
+        self.set_template_name("dashboard/index/index.html")
+        self.set_required_permissions([
+            "dashboard.is_owner",
+            "dashboard.can_view",
+            "dashboard.can_delete",
+        ])
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        try:
-            context["dataobject"] = DataObject.objects.get(pk=kwargs["dataobject_id"])
-            context["topic"] = Topic.objects.get(pk=context["dataobject"].topic.pk)
-            context["project"] = Project.objects.get(pk=context["topic"].project.pk)
-            context["data_duration"] = 30
-            # logging.debug(context)
-            return context
-        except Exception as e:
-            logging.debug(e)
-            return None
+        self.clear_context()
+        self.context = super().get_context_data(**kwargs)
+        self.user = get_user(self.request)
+        self.add_context_data("user", self.user)
+        self.add_context_data("project_list", self.get_projects_param_list())
+        return self.context
+
+
+@method_decorator(detail_decorators, name="dispatch")
+class DetailProjectView(ViewsMixin, TemplateView):
+    def __init__(self):
+        super().__init__()
+        self.set_template_name("dashboard/detail/project.html")
+
+    def get_context_data(self, **kwargs):
+        self.clear_context()
+        self.context = super().get_context_data()
+        project = self.get_project(kwargs["project_id"])
+        topics = self.get_topics_for_project(project)
+        self.add_context_data("project", project)
+        self.add_context_data("topics", topics)
+        return self.context
+
+
+@method_decorator(detail_decorators, name="dispatch")
+class DetailTopicView(ViewsMixin, TemplateView):
+    def __init__(self):
+        super().__init__()
+        self.set_template_name("dashboard/detail/topic.html")
+
+    def get_context_data(self, **kwargs):
+        self.clear_context()
+        self.context = super().get_context_data(**kwargs)
+        topic = self.get_topic(kwargs["topic_id"])
+        data_objects = self.get_dataobjects_for_topic(topic)
+        self.add_context_data("topic", topic)
+        self.add_context_data("data_objects", data_objects)
+        return self.context
+
+
+@method_decorator(detail_decorators, name="dispatch")
+class DetailDataObjectView(ViewsMixin, TemplateView):
+    def __init__(self):
+        super().__init__()
+        self.set_template_name("dashboard/detail/dataobject.html")
+
+    def get_context_data(self, **kwargs):
+        self.clear_context()
+        self.context = super().get_context_data(**kwargs)
+        data_object = self.get_data_object(kwargs["dataobject_id"])
+        topic = self.get_topic(data_object.topic.pk)
+        project = self.get_project(topic.project.pk)
+        self.add_context_data("dataobject", data_object)
+        self.add_context_data("topic", topic)
+        self.add_context_data("project", project)
+        return self.context
 
 
 """
@@ -130,33 +196,29 @@ New Views
 """
 
 
-class NewProjectView(View):
-    form_class = NewProjectForm
-    template = "dashboard/modals/new_project.html"
-
-    def start_mqtt_client(self, project):
-        mqtt_client_manager.add_client(
-            client_id=project.pk,
-            host=project.host,
-            port=project.port,
-        )
-        mqtt_client_manager.connect_client(project.pk)
-        mqtt_client_manager.start_client(project.pk)
+class NewProjectView(ViewsMixin, View):
+    def __init__(self):
+        super().__init__()
+        self.set_template_name("dashboard/modals/new_project.html")
+        self.set_form_class(NewProjectForm)
 
     def get(self, request, *args, **kwargs):
         initial = {"mqtt_port": 1883}
-        user = get_user(request)
-        if not user.is_authenticated:
+        self.user = get_user(request)
+        if not self.user.is_authenticated:
             return HttpResponse(status=403)
 
         form = self.form_class(initial=initial)
-        return render(request, self.template, {"form": form})
+        self.clear_context()
+        self.add_context_data("form", form)
+        return self.render_template(request)
 
     def post(self, request, *args, **kwargs):
-        user = get_user(request)
-        if not user.is_authenticated:
+        self.user = get_user(request)
+        if not self.user.is_authenticated:
             return HttpResponse(status=403)
 
+        self.clear_context()
         form = self.form_class(request.POST)
         if form.is_valid():
             project = Project(
@@ -166,36 +228,39 @@ class NewProjectView(View):
                 port=form.cleaned_data["mqtt_port"],
                 username=form.cleaned_data["mqtt_username"],
                 password=form.cleaned_data["mqtt_password"],
-                db_name=get_db_name(user),
+                db_name=get_db_name(self.user),
             )
 
             try:
                 project.save()
-                assign_perm("is_owner", user, project)
-                mqtt_client_manager.add_client(
-                    client_id=project.pk,
-                    host=project.host,
-                    port=project.port,
-                    userdata=None
-                )
-                self.start_mqtt_client(project)
-                return HttpResponse(status=201)
-            except Exception as e:
-                logging.error(e)
-                if project:
-                    project.delete()
-
+            except:
                 form.add_error(None, "Unknown error!!")
-                return render(request, self.template, {"form": form})
+                self.add_context_data("form", form)
+                return self.render_template(request)
+
+            assign_perm("is_owner", self.user, project)
+            mqtt_client_manager.add_client(
+                client_id=project.pk,
+                host=project.host,
+                port=project.port,
+                userdata=None
+            )
+            mqtt_client_manager.connect_client(project.pk)
+            mqtt_client_manager.start_client(project.pk)
+            return HttpResponse(status=201)
         else:
             form.add_error(None, "Form not valid. Please review form and update.")
-            return render(request, self.template, {"form": form})
+            self.add_context_data("form", form)
+            return self.render_template(request)
 
 
-class NewTopicView(View):
+class NewTopicView(ViewsMixin, View):
     qos_choices = Topic.QOS_CHOICES
-    form_class = NewTopicForm
-    template = "dashboard/modals/new_topic.html"
+
+    def __init__(self):
+        super().__init__()
+        self.set_template_name("dashboard/modals/new_topic.html")
+        self.set_form_class(NewTopicForm)
 
     def subscribe_mqtt_topic(self, project, topic):
         _client = mqtt_client_manager.get_client(project.pk)
@@ -203,35 +268,34 @@ class NewTopicView(View):
             logging.debug("Not valid client")
             return False
 
-        # logging.debug(_client.host)
         return async_to_sync(_client.subscribe_topic)(
             topic=topic.path,
             qos=topic.qos
         )
 
     def get(self, request, *args, **kwargs):
-        user = get_user(request)
-        if not user.is_authenticated:
+        self.user = get_user(request)
+        if not self.user.is_authenticated:
             return HttpResponse(status=403)
 
-        project = get_object_or_404(Project, pk=kwargs["project_id"])
+        self.clear_context()
+        project = self.get_project(kwargs["project_id"])
         initial = {
             "project_id": project.pk,
         }
         form = self.form_class(initial=initial)
-        context = {
-            "form": form,
-            "project": project,
-            "qos_choices": self.qos_choices,
-        }
-        return render(request, self.template, context)
+        self.add_context_data("form", form)
+        self.add_context_data("project", project)
+        self.add_context_data("qos_choices", self.qos_choices)
+        return self.render_template(request)
 
     def post(self, request, *args, **kwargs):
-        user = get_user(request)
-        if not user.is_authenticated:
+        self.user = get_user(request)
+        if not self.user.is_authenticated:
             return HttpResponse(status=403)
 
-        project = get_object_or_404(Project, pk=kwargs["project_id"])
+        self.clear_context()
+        project = self.get_project(kwargs["project_id"])
         form = self.form_class(request.POST)
         if form.is_valid():
             topic = Topic(
@@ -244,113 +308,100 @@ class NewTopicView(View):
                 project=project,
             )
 
+            saved_topics = self.get_topics_for_project(project)
+            for s_topic in saved_topics:
+                if topic.name == s_topic.name:
+                    form.add_error(None, "Name already exists")
+                    return self.render_template(request)
+
             try:
-                res = self.subscribe_mqtt_topic(project, topic)
-                if not res:
-                    raise RuntimeError("Could not subscribe")
                 topic.save()
-                return HttpResponse(status=201)
-            except Exception as e:
-                logging.exception(e)
-                form.add_error(None, "Unknown error occured!")
-                if topic.id:
-                    topic.delete()
+            except:
+                form.add_error(None, "Unknown Error!!")
+                return self.render_template(request)
 
-                context = {
-                    "form": form,
-                    "project": project,
-                    "qos_choices": self.qos_choices,
-                }
-                return render(request, self.template, context)
+            self.subscribe_mqtt_topic(project, topic)
+            return HttpResponse(status=201)
         else:
-            # logging.debug(form.errors)
             form.add_error(None, "Invalid form!")
-            context = {
-                "form": form,
-                "project": project,
-                "qos_choices": self.qos_choices,
-            }
-            return render(request, self.template, context)
+            return self.render_template(request)
 
 
-class NewDataObject(View):
-    template_name = "dashboard/modals/new_dataobject.html"
-    form_class = NewDataObjectForm
-    context = {
-        "format_choices": DataObject.FORMAT_CHOICES,
-        "data_types": DataObject.DATA_TYPE_CHOICES,
-    }
+class NewDataObject(ViewsMixin, View):
+    def __init__(self):
+        super().__init__()
+        self.set_template_name("dashboard/modals/new_dataobject.html")
+        self.set_form_class(NewDataObjectForm)
 
     def get(self, request, *args, **kwargs):
-        topic = Topic.objects.get(pk=kwargs["topic_id"])
+        self.clear_context()
+        topic = self.get_topic(kwargs["topic_id"])
         form = self.form_class()
-        self.context["topic"] = topic
-        self.context["form"] = form
-        return render(request, self.template_name, context=self.context)
+        self.add_context_data("topic", topic)
+        self.add_context_data("form", form)
+        self.add_context_data("format_choices", DataObject.FORMAT_CHOICES)
+        self.add_context_data("data_types", DataObject.DATA_TYPE_CHOICES)
+        self.add_context_data("widget_types", DataObject.WIDGET_TYPE_CHOICES)
+        return self.render_template(request)
 
     def post(self, request, *args, **kwargs):
-        dataobject = None
-        topic = Topic.objects.get(pk=kwargs["topic_id"])
+        self.clear_context()
+        topic = self.get_topic(kwargs["topic_id"])
         form = self.form_class(request.POST)
-        self.context["topic"] = topic
-        self.context["form"] = form
+        self.add_context_data("topic", topic)
+        self.add_context_data("form", form)
+        self.add_context_data("format_choices", DataObject.FORMAT_CHOICES)
+        self.add_context_data("data_types", DataObject.DATA_TYPE_CHOICES)
+        self.add_context_data("widget_types", DataObject.WIDGET_TYPE_CHOICES)
 
         if form.is_valid():
             if (not form.cleaned_data["key"]) and (form.cleaned_data["format"] == DataObject.FORMAT_CHOICE_JSON):
                 form.add_error(None, "Key required for JSON types")
-                return render(request, self.template_name, context=self.context)
+                return self.render_template(request)
 
-            dataobject = DataObject(
+            data_object = DataObject(
                 name=form.cleaned_data["name"],
                 description=form.cleaned_data["desc"],
                 format=form.cleaned_data["format"],
                 data_type=form.cleaned_data["data_type"],
                 path=form.cleaned_data["path"],
                 key=form.cleaned_data["key"],
-                topic=topic
+                topic=topic,
+                widget_type=form.cleaned_data["widget_type"]
             )
             try:
-                dataobject.save()
+                data_object.save()
                 return HttpResponse(status=201)
-            except Exception as e:
-                logging.debug(e)
-                if dataobject:
-                    dataobject.delete()
-
+            except:
                 form.add_error(None, "Unknown error occurred!")
-                return render(request, self.template_name, context=self.context)
+                return self.render_template(request)
         else:
             form.add_error(None, "Form invalid!")
-            return render(request, self.template_name, context=self.context)
+            return self.render_template(request)
 
 
 """
 Delete
 """
-
-
-class DeleteViewBase(View):
-    user_permissions = None
-    required_permissions = [
-        "dashboard.is_owner",
-        "dashboard.can_delete",
-    ]
-
-
-class DeleteProjectView(DeleteViewBase):
-    user_permissions = None
-    template_name = "dashboard/index/include/index_content.html"
+class DeleteProjectView(ViewsMixin, View):
+    def __init__(self):
+        super().__init__()
+        self.set_template_name("dashboard/index/include/index_content.html")
+        self.set_required_permissions([
+            "dashboard.is_owner",
+            "dashboard.can_delete",
+        ])
 
     def get(self, request, *args, **kwargs):
-        user = get_user(request)
-        project = get_object_or_404(Project, pk=kwargs["project_id"])
+        self.user = get_user(request)
+        project = self.get_project(kwargs["project_id"])
+        user_permissions = get_perms(self.user, project)
+        logging.debug(f"User perms: {user_permissions}, required: {self.required_permissions}")
 
-        self.user_permissions = get_perms(user, project)
-        if (("is_owner" not in self.user_permissions)
-                and ("can_delete" not in self.user_permissions)):
-            return HttpResponse(status=403)
+        if ("is_owner" not in user_permissions) and ("can_delete" not in user_permissions):
+            return HttpResponse(status=500)
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        with concurrent.futures.ThreadPoolExecutor() as pool:
             fut = pool.submit(
                 db_utils.delete_project_collection, project
             )
@@ -360,42 +411,24 @@ class DeleteProjectView(DeleteViewBase):
 
         mqtt_client_manager.delete_client(project.pk)
         project.delete()
+        self.clear_context()
+        self.add_context_data("project_list", self.get_projects_param_list())
         return self.render_template(request)
 
-    def render_template(self, request):
-        user = get_user(request)
-        project_list = list()
-        for _project in get_objects_for_user(user, self.required_permissions, any_perm=True):
-            topics = Topic.objects.filter(project=_project)
-            _client = mqtt_client_manager.get_client(_project.pk)
-            if _client:
-                connected = _client.connected
-            else:
-                connected = False
 
-            project_params = {
-                "project": _project,
-                "connected": connected
-            }
-            projects_entry = {
-                "project_params": project_params,
-                "topics": topics
-            }
-            project_list.append(projects_entry)
-
-        context = {
-            "project_list": project_list,
-        }
-        return render(request, self.template_name, context=context)
-
-
-class DeleteTopicView(DeleteViewBase):
-    template_name = "dashboard/detail/include/project_content.html"
+class DeleteTopicView(ViewsMixin, View):
+    def __init__(self):
+        super().__init__()
+        self.set_template_name("dashboard/detail/include/project_content.html")
+        self.set_required_permissions([
+            "dashboard.is_owner",
+            "dashboard.can_delete",
+        ])
 
     def get(self, request, *args, **kwargs):
-        topic = get_object_or_404(Topic, pk=kwargs["topic_id"])
-        project = get_object_or_404(Project, pk=topic.project.pk)
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        topic = self.get_topic(kwargs["topic_id"])
+        project = self.get_project(topic.project.pk)
+        with concurrent.futures.ThreadPoolExecutor() as pool:
             fut = pool.submit(
                 db_utils.delete_topic_documents, project, topic
             )
@@ -405,15 +438,10 @@ class DeleteTopicView(DeleteViewBase):
 
         self.unsubscribe_mqtt_topic(project, topic)
         topic.delete()
-        return self.render_template(request, project)
-
-    def render_template(self, request, project):
-        context = {
-            "project": project,
-            "topics": Topic.objects.filter(project=project),
-        }
-
-        return render(request, self.template_name, context=context)
+        self.clear_context()
+        self.add_context_data("project", project)
+        self.add_context_data("topics", self.get_topics_for_project(project))
+        return self.render_template(request)
 
     def unsubscribe_mqtt_topic(self, project, topic):
         _client = mqtt_client_manager.get_client(project.pk)
@@ -424,14 +452,20 @@ class DeleteTopicView(DeleteViewBase):
         async_to_sync(_client.unsubscribe_topic)(topic.path)
 
 
-class DeleteDataObject(DeleteViewBase):
-    template_name = "dashboard/detail/include/topic_content.html"
+class DeleteDataObject(ViewsMixin, View):
+    def __init__(self):
+        super().__init__()
+        self.set_template_name("dashboard/detail/include/topic_content.html")
+        self.set_required_permissions([
+            "dashboard.is_owner",
+            "dashboard.can_delete",
+        ])
 
     def get(self, request, *args, **kwargs):
-        data_object = get_object_or_404(DataObject, pk=kwargs["dataobject_id"])
-        topic = get_object_or_404(Topic, pk=data_object.topic.pk)
-        project = get_object_or_404(Project, pk=topic.project.pk)
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        data_object = self.get_data_object(kwargs["dataobject_id"])
+        topic = self.get_topic(data_object.topic.pk)
+        project = self.get_project(topic.project.pk)
+        with concurrent.futures.ThreadPoolExecutor() as pool:
             fut = pool.submit(
                 db_utils.delete_dataobject, project, topic, data_object
             )
@@ -441,86 +475,84 @@ class DeleteDataObject(DeleteViewBase):
                 return HttpResponse(status=500)
 
         data_object.delete()
-        return self.render_template(request, topic)
-
-    def render_template(self, request, topic):
-        context = {
-            "topic": topic,
-            "data_objects": DataObject.objects.filter(topic=topic),
-        }
-
-        return render(request, self.template_name, context=context)
+        self.clear_context()
+        self.add_context_data("topic", topic)
+        self.add_context_data("data_objects", self.get_dataobjects_for_topic(topic))
+        return self.render_template(request)
 
 
-class EditDataObjectView(View):
-    form_class = NewDataObjectForm
-    template_name = "dashboard/modals/edit_dataobject.html"
+class EditDataObjectView(ViewsMixin, View):
     context = {
         "format_choices": DataObject.FORMAT_CHOICES,
         "data_types": DataObject.DATA_TYPE_CHOICES,
+        "widget_types": DataObject.WIDGET_TYPE_CHOICES,
     }
 
-    def get(self, request, *args, **kwargs):
-        dataobject = get_object_or_404(DataObject, pk=kwargs["dataobject_id"])
-        topic = get_object_or_404(Topic, pk=dataobject.topic.pk)
-        # project = get_object_or_404(Project, pk=topic.project.pk)
+    def __init__(self):
+        super().__init__()
+        self.set_template_name("dashboard/modals/edit_dataobject.html")
+        self.set_form_class(NewDataObjectForm)
 
+    def get(self, request, *args, **kwargs):
+        data_object = self.get_data_object(kwargs["dataobject_id"])
+        topic = self.get_topic(data_object.topic.pk)
         initial = {
-            "name": dataobject.name,
-            "desc": dataobject.description,
-            "data_type": dataobject.data_type,
-            "path": dataobject.path,
-            "format": dataobject.format,
-            "key": dataobject.key,
+            "name": data_object.name,
+            "desc": data_object.description,
+            "data_type": data_object.data_type,
+            "path": data_object.path,
+            "format": data_object.format,
+            "key": data_object.key,
         }
 
         form = self.form_class(initial)
-        self.context["form"] = form
-        self.context["dataobject"] = dataobject
-        return render(request, self.template_name, self.context)
+        self.add_context_data("form", form)
+        self.add_context_data("dataobject", data_object)
+        return self.render_template(request)
 
     def post(self, request, *args, **kwargs):
-        dataobject = DataObject.objects.get(pk=kwargs["dataobject_id"])
-
+        data_object = self.get_data_object(kwargs["dataobject_id"])
         form = self.form_class(request.POST)
-        self.context["form"] = form
-        self.context["dataobject"] = dataobject
+        self.add_context_data("form", form)
+        self.add_context_data("dataobject", data_object)
         if not form.has_changed():
             return HttpResponse(status=201)
         elif form.is_valid():
-            dataobject.name = form.cleaned_data.get("name", dataobject.name)
-            dataobject.description = form.cleaned_data.get("desc", dataobject.description)
-            dataobject.path = form.cleaned_data.get("path", dataobject.path)
-            dataobject.key = form.cleaned_data.get("key", dataobject.key)
-            dataobject.format = form.cleaned_data.get("format", dataobject.format)
-            dataobject.data_type = form.cleaned_data.get("data_type", dataobject.data_type)
+            data_object.name = form.cleaned_data.get("name", data_object.name)
+            data_object.description = form.cleaned_data.get("desc", data_object.description)
+            data_object.path = form.cleaned_data.get("path", data_object.path)
+            data_object.key = form.cleaned_data.get("key", data_object.key)
+            data_object.format = form.cleaned_data.get("format", data_object.format)
+            data_object.data_type = form.cleaned_data.get("data_type", data_object.data_type)
+            data_object.widget_type = form.cleaned_data.get("widget_type", data_object.widget_type)
 
-            if (dataobject.format == dataobject.FORMAT_CHOICE_JSON) and (not dataobject.key):
+            if (data_object.format == data_object.FORMAT_CHOICE_JSON) and (not data_object.key):
                 form.add_error(None, "Key required for json data types")
                 return render(request, self.template_name, self.context)
 
-            dataobject.save()
+            data_object.save()
             return HttpResponse(status=201)
         else:
             form.add_error(None, "Error")
-            return render(request, self.template_name, self.context)
+            return self.render_template(request)
+
 
 """
 Ajax queries
 """
-
-
-class QueryDataObjectsView(View):
-    template_name = "dashboard/partials/ajax/dataobjects.html"
+class QueryDataObjectsView(ViewsMixin, View):
+    def __init__(self):
+        super().__init__()
+        self.set_template_name("dashboard/partials/ajax/dataobjects.html")
 
     def get(self, request, *args, **kwargs):
-        user = get_user(request)
-        if not user.is_authenticated:
+        self.user = get_user(request)
+        if not self.user.is_authenticated:
             return HttpResponse(status=403)
 
-        logging.debug("Query dataobjects")
-        topic = get_object_or_404(Topic, pk=kwargs["topic_id"])
-        project = get_object_or_404(Project, pk=topic.project.pk)
+        self.clear_context()
+        topic = self.get_topic(kwargs["topic_id"])
+        project = self.get_project(topic.project.pk)
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
             t = pool.submit(
@@ -540,26 +572,25 @@ class QueryDataObjectsView(View):
                     data_detail["value"] = value
                     data_details.append(data_detail)
 
-            context = {
-                "data_details": data_details
-            }
-        else:
-            context = None
+            self.add_context_data("data_details", data_details)
 
-        return render(request, self.template_name, context)
+        return self.render_template(request)
 
 
-class QueryDataObjectValues(View):
-    template_name = "dashboard/partials/ajax/dataobject_values.html"
+class QueryDataObjectValues(ViewsMixin, View):
+    def __init__(self):
+        super().__init__()
+        self.set_template_name("dashboard/partials/ajax/dataobject_values.html")
 
     def get(self, request, *args, **kwargs):
-        user = get_user(request)
-        if not user.is_authenticated:
+        self.user = get_user(request)
+        if not self.user.is_authenticated:
             return HttpResponse(status=403)
 
-        data_object = get_object_or_404(DataObject, pk=kwargs["dataobject_id"])
-        topic = get_object_or_404(Topic, pk=data_object.topic.pk)
-        project = get_object_or_404(Project, pk=topic.project.pk)
+        self.clear_context()
+        data_object = self.get_data_object(kwargs["dataobject_id"])
+        topic = self.get_topic(data_object.topic.pk)
+        project = self.get_project(topic.project.pk)
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
             fut = pool.submit(
                 db_utils.get_data_objects, project, topic
@@ -568,8 +599,8 @@ class QueryDataObjectValues(View):
             values_list = fut.result()
 
         if values_list:
-            plot_x = list()
-            plot_y = list()
+            x_values = list()
+            y_values = list()
             data_details = list()
             for value_obj in values_list:
                 data_detail = dict()
@@ -580,30 +611,38 @@ class QueryDataObjectValues(View):
                     data_detail["data_object"] = data_object
                     data_detail["value"] = value
                     data_details.append(data_detail)
-                    plot_x.append(data_detail["timestamp"])
-                    plot_y.append(value)
+                    x_values.append(data_detail["timestamp"])
+                    y_values.append(value)
 
-            plot = Plot(x_list=plot_x, y_list=plot_y)
-            plot.plot_timeseries()
-            bokeh_script, bokeh_div = plot.get_components()
-            context = {
-                "data_list": data_details,
-                "bokeh_script": bokeh_script,
-                "bokeh_div": bokeh_div,
-            }
-        else:
-            context = None
+            plot = BokehPlot(x_list=x_values, y_list=y_values)
+            if data_object.widget_type == DataObject.WIDGET_TYPE_LINE:
+                plot.plot_timeseries()
+                bokeh_script, bokeh_div = plot.get_components()
+            elif data_object.widget_type == DataObject.WIDGET_TYPE_SCATTER:
+                plot.scatter_plot("Scatter Plot")
+                bokeh_script, bokeh_div = plot.get_components()
+            elif data_object.widget_type == DataObject.WIDGET_TYPE_STATUS:
+                plot.plot_timeseries()
+                bokeh_script, bokeh_div = plot.get_components()
+            else:
+                bokeh_script, bokeh_div = plot.get_components()
 
-        return render(request, self.template_name, context)
+            self.add_context_data("data_list", data_details)
+            self.add_context_data("bokeh_script", bokeh_script)
+            self.add_context_data("bokeh_div", bokeh_div)
+
+        return self.render_template(request)
 
 
-class DownloadView(View):
+class DownloadView(ViewsMixin, View):
+    def __init__(self):
+        super().__init__()
+
     def get(self, request, *args, **kwargs):
-        dataobject = DataObject.objects.get(pk=kwargs["dataobject_id"])
-        topic = Topic.objects.get(pk=dataobject.topic.pk)
-        project = Project.objects.get(pk=topic.project.pk)
-        start_time = datetime.datetime.utcnow() - datetime.timedelta(hours=24)
-        entries_num = 100
+        dataobject = self.get_data_object(kwargs["dataobject_id"])
+        topic = self.get_topic(dataobject.topic.pk)
+        project = self.get_project(pk=topic.project.pk)
+        entries_num = 500
 
         aggregation = [
             {"$match": {
@@ -650,41 +689,29 @@ class DownloadView(View):
         )
 
 
-class RefreshConnectionsView(View):
-    template_name = "dashboard/index/include/index_content.html"
-    def send_mqtt_consumer_refresh(self):
-        logging.debug("Refresh client connections")
-        mqtt_client_manager.refresh_clients()
+class RefreshConnectionsView(ViewsMixin, View):
+    def __init__(self):
+        super().__init__()
+        self.set_template_name("dashboard/index/include/index_content.html")
+        self.set_required_permissions([
+            "dashboard.is_owner",
+            "dashboard.can_view",
+            "dashboard.can_delete",
+        ])
 
     def get(self, request, *args, **kwargs):
-        projects = Project.objects.all()
+        self.user = get_user(request)
+        projects = self.get_projects()
         for project in projects:
             _client = mqtt_client_manager.get_client(project.pk)
             if not _client:
-                logging.debug(f"Add client {project.pk}")
                 mqtt_client_manager.add_client(
                     client_id=project.pk,
                     host=project.host,
                     port=project.port
                 )
-        self.send_mqtt_consumer_refresh()
-        project_list = list()
-        for project in projects[:10]:
-            topics = Topic.objects.filter(project=project)
-            _client = mqtt_client_manager.get_client(project.pk)
-            if _client:
-                connected = _client.connected
-            else:
-                connected = False
 
-            project_params = {
-                "project": project,
-                "connected": connected
-            }
-            projects_entry = {
-                "project_params": project_params,
-                "topics": topics
-            }
-            project_list.append(projects_entry)
-
-        return render(request, self.template_name, {"project_list": project_list})
+        mqtt_client_manager.refresh_clients()
+        self.clear_context()
+        self.add_context_data("project_list", self.get_projects_param_list())
+        return self.render_template(request)

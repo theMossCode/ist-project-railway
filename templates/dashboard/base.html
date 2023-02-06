@@ -12,6 +12,9 @@
     <script src="https://cdn.jsdelivr.net/npm/uikit@3.15.22/dist/js/uikit-icons.min.js"></script>
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.8.5" integrity="sha384-7aHh9lqPYGYZ7sTHvzP1t3BAfLhYSTy9ArHdP3Xsr9/3TlGurYgcPBoFmXX2TX/w" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>
+    <!-- <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"/> -->
+
     <title> {% block title_block %}{% endblock title_block %} </title>
     <!-- Bokeh -->
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-3.0.3.min.js" crossorigin="anonymous"></script>
@@ -37,7 +40,7 @@
     <!-- </div> -->
     {% block modalsblock %}
     {% endblock modalsblock %}
-    <script type="text/javascript" src="{% static 'dashboard/scripts/show_modal.js' %}"></script>
+    <script type="text/javascript" src="{% static 'dashboard/scripts/dashboard.js' %}"></script>
 </body>
 
 </html>

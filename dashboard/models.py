@@ -66,8 +66,20 @@ class DataObject(BaseModel):
         (DATA_TYPE_BOOLEAN, "Boolean"),
     ]
 
+    WIDGET_TYPE_SCATTER = "SCATTER"
+    WIDGET_TYPE_LINE = "LINE"
+    WIDGET_TYPE_STATUS = "STATUS"
+    WIDGET_TYPE_MAP = "MAP"
+    WIDGET_TYPE_CHOICES = [
+        (WIDGET_TYPE_SCATTER, "Scatter Plot"),
+        (WIDGET_TYPE_LINE, "Line plot"),
+        (WIDGET_TYPE_STATUS, "Status Indicator"),
+        (WIDGET_TYPE_MAP, "Map")
+    ]
+
     format = models.CharField(max_length=5, choices=FORMAT_CHOICES)
     data_type = models.CharField(max_length=5, choices=DATA_TYPE_CHOICES)
+    widget_type = models.CharField(max_length=10, choices=WIDGET_TYPE_CHOICES, default=WIDGET_TYPE_LINE)
     path = models.CharField(max_length=64, null=True, blank=True)
     key = models.CharField(max_length=32, null=True, blank=True)
     topic = models.ForeignKey(Topic, on_delete=models.CASCADE)

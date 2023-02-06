@@ -27,4 +27,5 @@ class NewDataObjectForm(forms.Form):
     path = forms.CharField(label="path", max_length=64, required=False)
     format = forms.ChoiceField(label="format", choices=DataObject.FORMAT_CHOICES)
     key = forms.CharField(label="key", max_length=32, required=False)
+    widget_type = forms.ChoiceField(label="widget_type", choices=DataObject.WIDGET_TYPE_CHOICES)
 
