@@ -1,5 +1,13 @@
 {% extends "../base.html" %}
 {% load static %}
+{% block bokeh_scripts %}
+<!-- Bokeh -->
+<script src="https://cdn.bokeh.org/bokeh/release/bokeh-3.0.3.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.0.3.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-3.0.3.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.bokeh.org/bokeh/release/bokeh-gl-3.0.3.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.bokeh.org/bokeh/release/bokeh-mathjax-3.0.3.min.js" crossorigin="anonymous"></script>
+{% endblock bokeh_scripts %}
 {% block topmenublock %}
 {{ topic.name }}
 <div class="uk-grid">
@@ -21,12 +29,15 @@
 </div>
 {% endblock topmenublock %}
 {% block maincontentblock %}
+<img id="reload-indicator" class="htmx-indicator" src="{% static 'svg-loaders/tail-spin.svg' %}" width="28">
 <div id="div-dataobject-data" class="uk-child-width-1-1@s" uk-grid>
     <hr>
-    <div id="div-dataobject-swap" hx-get="{% url 'dashboard:query_dataobject_values' dataobject.id %}" hx-trigger="load" hx-swap="outerHTML">
+    <div id="div-dataobject-swap" hx-get="{% url 'dashboard:get_dataobject_values' dataobject.id %}" hx-trigger="load" hx-swap="outerHTML">
         <div class="uk-container uk-container-expand">
-            <img src="{% static 'svg-loaders/audio.svg' %}" width="50"> <span class="uk-container uk-container-expand">Fetching data...</span>
+            <img src="{% static 'svg-loaders/tail-spin.svg' %}" width="50"> <span class="uk-container uk-container-expand">Fetching data...</span>
         </div>
+    </div>
+    <div class="uk-container uk-container-expand" id="div-values-{{ dataobject.id }}">
     </div>
 </div>
 {% endblock maincontentblock %}

@@ -62,7 +62,7 @@ class DataObject(BaseModel):
     DATA_TYPE_CHOICES = [
         (DATA_TYPE_NUMBER, "Number"),
         (DATA_TYPE_STRING, "String"),
-        (DATA_TYPE_LOCATION, "Location"),
+        (DATA_TYPE_LOCATION, "Location(Disabled)"),
         (DATA_TYPE_BOOLEAN, "Boolean"),
     ]
 
@@ -73,8 +73,8 @@ class DataObject(BaseModel):
     WIDGET_TYPE_CHOICES = [
         (WIDGET_TYPE_SCATTER, "Scatter Plot"),
         (WIDGET_TYPE_LINE, "Line plot"),
-        (WIDGET_TYPE_STATUS, "Status Indicator"),
-        (WIDGET_TYPE_MAP, "Map")
+        (WIDGET_TYPE_STATUS, "Status Indicator(Disabled)"),
+        (WIDGET_TYPE_MAP, "Map(Disabled)")
     ]
 
     format = models.CharField(max_length=5, choices=FORMAT_CHOICES)

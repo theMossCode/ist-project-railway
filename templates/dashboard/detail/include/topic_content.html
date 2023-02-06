@@ -2,6 +2,7 @@
 {% for obj in data_objects %}
 <div id="div-dataobj-{{ obj.id }}">
     <div class="uk-card uk-card-default uk-card-hover">
+        <img id="reload-indicator" class="htmx-indicator" src="{% static 'svg-loaders/tail-spin.svg' %}" width="28">
         <div class="uk-position-top-right uk-flex-row uk-padding-small">
             <!-- <button class="uk-button uk-button-default uk-button-small" type="button"> -->
             <a href="{% url 'dashboard:detail_dataobject' obj.id %}" class="uk-text-secondary uk-button uk-button-small uk-button-default">
@@ -32,10 +33,12 @@
         </div>
         <div class="uk-card-body">
             <div class="uk-margin">
-                <div class="uk-container uk-container-expand uk-container-small" id="div-dataobj-{{ obj.id }}" hx-get="{% url 'dashboard:query_dataobject_values' obj.id %}" hx-trigger="load" hx-swap="outerHTML">
+                <div class="uk-container uk-container-expand uk-container-small" id="div-dataobj-{{ obj.id }}" hx-get="{% url 'dashboard:get_dataobject_values' obj.id %}" hx-trigger="load" hx-swap="outerHTML">
                     <div class="uk-container uk-container-expand">
-                        <img src="{% static 'svg-loaders/audio.svg' %}" width="50"> <span class="uk-container uk-container-expand">Fetching data...</span>
+                        <img src="{% static 'svg-loaders/tail-spin.svg' %}" width="50"> <span class="uk-container uk-container-expand">Fetching data...</span>
                     </div>
+                </div>
+                <div class="uk-container uk-container-expand" id="div-values-{{ obj.id }}">
                 </div>
             </div>
         </div>

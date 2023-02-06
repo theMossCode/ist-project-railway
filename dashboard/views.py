@@ -580,7 +580,7 @@ class QueryDataObjectsView(ViewsMixin, View):
 class QueryDataObjectValues(ViewsMixin, View):
     def __init__(self):
         super().__init__()
-        self.set_template_name("dashboard/partials/ajax/dataobject_values.html")
+        self.set_template_name("dashboard/partials/data_values_container.html")
 
     def get(self, request, *args, **kwargs):
         self.user = get_user(request)
@@ -614,7 +614,7 @@ class QueryDataObjectValues(ViewsMixin, View):
                     x_values.append(data_detail["timestamp"])
                     y_values.append(value)
 
-            plot = BokehPlot(x_list=x_values, y_list=y_values)
+            plot = BokehPlot(x_list=x_values[:30], y_list=y_values[:30])
             if data_object.widget_type == DataObject.WIDGET_TYPE_LINE:
                 plot.plot_timeseries()
                 bokeh_script, bokeh_div = plot.get_components()
@@ -627,7 +627,8 @@ class QueryDataObjectValues(ViewsMixin, View):
             else:
                 bokeh_script, bokeh_div = plot.get_components()
 
-            self.add_context_data("data_list", data_details)
+            self.add_context_data("data_object", data_object)
+            self.add_context_data("data_list", data_details[:30])
             self.add_context_data("bokeh_script", bokeh_script)
             self.add_context_data("bokeh_div", bokeh_div)
 
@@ -730,7 +731,7 @@ class CheckConnectionView(View):
 
         mqtt_client = mqtt_client_manager.get_client(int(project_id))
         if not mqtt_client:
-            return HttpResponse(status=500)
+            return HttpResponse(status=404)
 
         if mqtt_client.connected:
             return render(request, self.connected_template)

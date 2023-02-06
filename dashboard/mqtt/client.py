@@ -167,16 +167,6 @@ class MQTTClient(MessageParserMixin, client.Client):
         if len(topics) <= 0:
             return
 
-        try:
-            async_to_sync(channel_layer.group_send)(
-                f"project_{self.id}", {
-                    "type": "broker.connection.updated",
-                    "connection": 1,
-                }
-            )
-        except RuntimeError as e:
-            logging.debug("Channel layers error")
-
         with concurrent.futures.ThreadPoolExecutor() as pool:
             futures = [pool.submit(
                 async_to_sync(self.subscribe_topic), topic.path, topic.qos,
@@ -185,16 +175,6 @@ class MQTTClient(MessageParserMixin, client.Client):
     # Disconnected callback
     def _disconnected(self, client_ptr, userdata, rc):
         logging.debug("disconnected {}".format(self.host))
-        try:
-            async_to_sync(channel_layer.group_send)(
-                f"project_{self.id}", {
-                    "type": "broker.connection.updated",
-                    "connection": 0,
-                }
-            )
-        except RuntimeError:
-            logging.debug("Channel layers error")
-
         self.connected = False
 
     # Message received callback

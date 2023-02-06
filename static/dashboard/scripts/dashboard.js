@@ -22,22 +22,6 @@ function hideModal(modal_id) {
     }, 200);
 }
 
-function refreshConnectionsOnPress(url){
-    fetch(url)
-    .then(response=>{
-        if(response.ok){
-            showNotification("Connection refresh started...");
-        }
-        else{
-            showNotification("Request error");
-        }
-    })
-    .catch(error => {
-        showNotification("Unkown error");
-        console.log(error);
-    })
-}
-
 function showNotification(notification_msg){
     UIkit.notification(notification_msg);
 }

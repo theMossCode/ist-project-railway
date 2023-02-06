@@ -1,0 +1,29 @@
+{% load static %}
+<div class="uk-container uk-container-expand" hx-get="{% url 'dashboard:get_dataobject_values' data_object.id %}" hx-trigger="every 10s" id="div-values-{{ data_object.id }}" hx-indicator="#reload-indicator" hx-swap-oob="true">
+    <div class="uk-container uk-container-medium uk-width-1-1@s" id="div-plot">
+        {{ bokeh_div|safe }}
+        {{ bokeh_script|safe }}
+    </div>
+    <div class="uk-container uk-container-expand uk-width-1-1@s uk-overflow-auto uk-height-medium">
+        <table class="uk-table uk-table-small">
+            <thead>
+                <th>Name</th>
+                <th>Timestamp</th>
+                <th>Value</th>
+            </thead>
+            <tbody>
+                {% for data in data_list %}
+                <tr>
+                    <td>{{ data_object.name }}</td>
+                    <td>{{ data.timestamp }}</td>
+                    <td>{{ data.value }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <span>No data...</span>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
